@@ -139,7 +139,11 @@ export default function DocenteAsistencia({ asignacionActiva }) {
     };
 
     if (!asignacionActiva) {
-        return <div className="p-6 text-center text-slate-500">Seleccione una asignación para continuar.</div>;
+        return (
+            <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-xl text-center">
+                <p className="text-yellow-700 font-medium text-sm">Por favor, seleccione una asignatura desde el Panel Principal para gestionar la asistencia.</p>
+            </div>
+        );
     }
 
     return (
