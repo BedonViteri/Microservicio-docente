@@ -8,10 +8,15 @@ class DocenteServiceServicer(docente_pb2_grpc.DocenteServiceServicer):
     def RegistrarCalificacion(self, request, context):
         print(f"Recibida petición RegistrarCalificacion gRPC: Matricula {request.id_matricula}, Actividad {request.id_actividad}")
         
-        # OBTENEMOS METADATOS (por ejemplo, el ID del docente que envía Spring Boot)
+        # OBTENEMOS METADATOS (por ejemplo, el ID del docente y el token interno)
         metadata = dict(context.invocation_metadata())
         id_docente = metadata.get('docente_id')
+        internal_token = metadata.get('internal_token')
         
+        if internal_token != 'dev-token-123':
+            print("Token interno inválido o ausente.")
+            context.abort(grpc.StatusCode.UNAUTHENTICATED, "Token interno inválido o ausente")
+
         if not id_docente:
             print("No se proporcionó docente_id en los metadatos.")
             context.abort(grpc.StatusCode.UNAUTHENTICATED, "docente_id requerido en metadatos")
