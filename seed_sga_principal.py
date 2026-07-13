@@ -14,11 +14,11 @@ def main():
     
     # DB connection
     conn = psycopg2.connect(
-        dbname="postgres",
-        user="postgres.bxqixhhgkcyojulbmhpp",
-        password="402/42745aA",
-        host="aws-1-us-east-1.pooler.supabase.com",
-        port="5432"
+        dbname="sga",
+        user="postgres",
+        password="postgres",
+        host="localhost",
+        port="5433"
     )
     conn.autocommit = True
     cursor = conn.cursor()

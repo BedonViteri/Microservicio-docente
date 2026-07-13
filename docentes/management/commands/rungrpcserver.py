@@ -8,13 +8,14 @@ import sys
 import os
 
 # Añadir el directorio grpc_services al path para que los imports generados por protoc funcionen
+import django
 current_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 grpc_services_dir = os.path.join(current_dir, 'grpc_services')
 if grpc_services_dir not in sys.path:
     sys.path.append(grpc_services_dir)
 
 from docentes.grpc_services import docente_pb2_grpc, actividades_pb2_grpc, asistencia_pb2_grpc
-from docentes.grpc_services.docente_service import DocenteServiceServicer
+from docentes.grpc_services.server import DocenteServiceServicer
 from docentes.grpc_services.actividades_service import ActividadServiceServicer
 from docentes.grpc_services.asistencia_service import AsistenciaServiceServicer
 
