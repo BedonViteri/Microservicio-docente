@@ -249,7 +249,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                 <td className="px-4 py-3">
                                                     <input 
                                                         type="text" 
-                                                        value={asis.justificacion}
+                                                        value={asis.justificacion || ''}
                                                         onChange={(e) => handleJustificacionChange(est.idMatricula, e.target.value)}
                                                         disabled={yaRegistrado || (asis.estado !== 'JUSTIFICADO' && asis.estado !== 'ATRASO' && asis.estado !== 'AUSENTE')}
                                                         placeholder={asis.estado === 'JUSTIFICADO' ? 'Especifique motivo...' : ''}
