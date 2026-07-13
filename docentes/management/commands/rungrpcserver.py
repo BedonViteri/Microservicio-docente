@@ -8,6 +8,8 @@ import django
 
 from docentes.grpc_services import docente_pb2_grpc
 from docentes.grpc_services.server import DocenteServiceServicer
+from docentes.grpc_services import actividades_pb2_grpc
+from docentes.grpc_services.actividades_service import ActividadServiceServicer
 
 class Command(BaseCommand):
     help = 'Starts the gRPC server'
@@ -21,8 +23,8 @@ class Command(BaseCommand):
         port = '9091'
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
         
-        # Register the servicer
         docente_pb2_grpc.add_DocenteServiceServicer_to_server(DocenteServiceServicer(), server)
+        actividades_pb2_grpc.add_ActividadServiceServicer_to_server(ActividadServiceServicer(), server)
         
         server.add_insecure_port(f'[::]:{port}')
         server.start()
