@@ -6,10 +6,10 @@ import sys
 import os
 import django
 
-from docentes.grpc_services import docente_pb2_grpc
+from docentes.grpc_services import docente_pb2_grpc, actividades_pb2_grpc, asistencia_pb2_grpc
 from docentes.grpc_services.server import DocenteServiceServicer
-from docentes.grpc_services import actividades_pb2_grpc
 from docentes.grpc_services.actividades_service import ActividadServiceServicer
+from docentes.grpc_services.asistencia_service import AsistenciaServiceServicer
 
 class Command(BaseCommand):
     help = 'Starts the gRPC server'
@@ -25,6 +25,7 @@ class Command(BaseCommand):
         
         docente_pb2_grpc.add_DocenteServiceServicer_to_server(DocenteServiceServicer(), server)
         actividades_pb2_grpc.add_ActividadServiceServicer_to_server(ActividadServiceServicer(), server)
+        asistencia_pb2_grpc.add_AsistenciaServiceServicer_to_server(AsistenciaServiceServicer(), server)
         
         server.add_insecure_port(f'[::]:{port}')
         server.start()

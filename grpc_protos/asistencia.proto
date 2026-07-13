@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package asistencia;
+
+option java_package = "ec.edu.uteq.sga.grpc.asistencia";
+option java_multiple_files = true;
+
+service AsistenciaService {
+  rpc RegistrarAsistenciaGrupal (RegistrarAsistenciaGrupalRequest) returns (AsistenciaListResponse);
+  rpc ActualizarAsistencia (ActualizarAsistenciaRequest) returns (AsistenciaResponse);
+  rpc ConsultarAsistencia (ConsultarAsistenciaRequest) returns (AsistenciaListResponse);
+  rpc ConsultarResumenAsistencia (ConsultarResumenRequest) returns (ResumenAsistenciaListResponse);
+}
+
+message AsistenciaDTO {
+  int32 id_asistencia = 1;
+  int32 id_matricula = 2;
+  int32 id_asignacion = 3;
+  int32 id_periodo = 4;
+  string fecha = 5; // Formato YYYY-MM-DD
+  string estado = 6;
+  string justificacion = 7;
+}
+
+message ResumenAsistenciaDTO {
+  int32 id_resumen = 1;
+  int32 id_matricula = 2;
+  int32 id_asignacion = 3;
+  int32 id_periodo = 4;
+  int32 total_presentes = 5;
+  int32 total_ausentes = 6;
+  int32 total_justificados = 7;
+  int32 total_atrasos = 8;
+  double porcentaje_asistencia = 9;
+}
+
+message AsistenciaItemRequest {
+  int32 id_matricula = 1;
+  string estado = 2;
+  string justificacion = 3;
+}
+
+message RegistrarAsistenciaGrupalRequest {
+  int32 id_asignacion = 1;
+  int32 id_periodo = 2;
+  string fecha = 3; // Formato YYYY-MM-DD
+  repeated AsistenciaItemRequest asistencias = 4;
+}
+
+message ActualizarAsistenciaRequest {
+  int32 id_asistencia = 1;
+  string estado = 2;
+  string justificacion = 3;
+}
+
+message ConsultarAsistenciaRequest {
+  int32 id_asignacion = 1;
+  string fecha = 2; // Formato YYYY-MM-DD (Opcional)
+  int32 id_periodo = 3; // (Opcional)
+  int32 id_matricula = 4; // (Opcional)
+}
+
+message ConsultarResumenRequest {
+  int32 id_asignacion = 1;
+  int32 id_periodo = 2;
+  int32 id_matricula = 3; // Opcional
+}
+
+message AsistenciaResponse {
+  bool success = 1;
+  string message = 2;
+  AsistenciaDTO asistencia = 3;
+}
+
+message AsistenciaListResponse {
+  bool success = 1;
+  string message = 2;
+  repeated AsistenciaDTO asistencias = 3;
+}
+
+message ResumenAsistenciaListResponse {
+  bool success = 1;
+  string message = 2;
+  repeated ResumenAsistenciaDTO resumenes = 3;
+}
