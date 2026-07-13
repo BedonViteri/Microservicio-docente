@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package sga.docente.actividades;
+
+option java_package = "ec.edu.uteq.sga.grpc.actividades";
+option java_multiple_files = true;
+
+// Servicio para gestionar Actividades
+service ActividadService {
+  rpc CrearActividad (CrearActividadRequest) returns (ActividadResponse);
+  rpc EditarActividad (EditarActividadRequest) returns (ActividadResponse);
+  rpc ObtenerActividad (ObtenerActividadRequest) returns (ActividadResponse);
+  rpc ListarActividades (ListarActividadesRequest) returns (ListarActividadesResponse);
+  rpc EliminarActividad (EliminarActividadRequest) returns (EliminarActividadResponse);
+}
+
+message ActividadDto {
+  int64 id_actividad = 1;
+  int64 id_asignacion = 2;
+  int64 id_periodo = 3;
+  string tipo = 4;
+  string nombre = 5;
+  string descripcion = 6;
+  string fecha_entrega = 7;
+  double ponderacion = 8;
+  double nota_maxima = 9;
+  bool es_sumativa = 10;
+}
+
+message CrearActividadRequest {
+  int64 id_asignacion = 1;
+  int64 id_periodo = 2;
+  string tipo = 3;
+  string nombre = 4;
+  string descripcion = 5;
+  string fecha_entrega = 6;
+  double ponderacion = 7;
+  double nota_maxima = 8;
+  bool es_sumativa = 9;
+}
+
+message EditarActividadRequest {
+  int64 id_actividad = 1;
+  string tipo = 2;
+  string nombre = 3;
+  string descripcion = 4;
+  string fecha_entrega = 5;
+  double ponderacion = 6;
+  double nota_maxima = 7;
+  bool es_sumativa = 8;
+}
+
+message ObtenerActividadRequest {
+  int64 id_actividad = 1;
+}
+
+message ListarActividadesRequest {
+  int64 id_asignacion = 1;
+  int64 id_periodo = 2; // Opcional
+}
+
+message ActividadResponse {
+  bool exitoso = 1;
+  string mensaje = 2;
+  ActividadDto actividad = 3;
+}
+
+message ListarActividadesResponse {
+  bool exitoso = 1;
+  string mensaje = 2;
+  repeated ActividadDto actividades = 3;
+}
+
+message EliminarActividadRequest {
+  int64 id_actividad = 1;
+}
+
+message EliminarActividadResponse {
+  bool exitoso = 1;
+  string mensaje = 2;
+}
