@@ -85,7 +85,7 @@ export default function DocentePanel() {
 
     return (
         <Layout
-            breadcrumb={["Inicio", "Portal Docente"]}
+            breadcrumb={["Portal Docente"]}
             sidebarTitle="MENÚ DOCENTE"
             menuItems={menuItems}
             seccion={seccion}
