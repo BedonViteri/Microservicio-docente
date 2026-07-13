@@ -102,11 +102,7 @@ export default function DocentePanel() {
                         {asignaciones.map(a => (
                             <div 
                                 key={a.idAsignacion} 
-                                className={`w-[320px] bg-white border rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col justify-between ${
-                                    asignacionActiva?.idAsignacion === a.idAsignacion 
-                                        ? 'border-blue-500 ring-2 ring-blue-500 ring-opacity-20' 
-                                        : 'border-slate-200'
-                                }`}
+                                className="w-[320px] bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 p-6 flex flex-col justify-between"
                             >
                                 <div>
                                     {/* Cabecera del Card */}
