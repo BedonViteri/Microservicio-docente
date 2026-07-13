@@ -21,7 +21,7 @@ api.interceptors.response.use(
     if (error.response && (error.response.status === 401 || error.response.status === 403)) {
       // Clear localStorage and redirect to login if unauthorized
       localStorage.clear();
-      window.location.href = "/login";
+      window.location.href = "http://localhost:5173/login";
     }
     return Promise.reject(error);
   }
