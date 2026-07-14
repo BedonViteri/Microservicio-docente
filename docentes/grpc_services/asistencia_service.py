@@ -39,13 +39,13 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         total_atrasos = 0
         
         for a in asistencias:
-            if a.estado == EstadoAsistencia.PRESENTE:
+            if a.estado == 'PRESENTE':
                 total_presentes += 1
-            elif a.estado == EstadoAsistencia.AUSENTE:
+            elif a.estado == 'AUSENTE':
                 total_ausentes += 1
-            elif a.estado == EstadoAsistencia.JUSTIFICADO:
+            elif a.estado == 'JUSTIFICADO':
                 total_justificados += 1
-            elif a.estado == EstadoAsistencia.ATRASO:
+            elif a.estado == 'ATRASO':
                 total_atrasos += 1
                 
         # Upsert del resumen
