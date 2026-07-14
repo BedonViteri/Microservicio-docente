@@ -65,3 +65,25 @@ export const actualizarAsistencia = async (id, data) => {
     return response.data;
 };
 
+// --- CALIFICACIONES ---
+
+export const getCalificacionesEstudiante = async (idMatricula, trimestre) => {
+    const response = await api.get(`/api/rpc/calificaciones/${idMatricula}/${trimestre}`);
+    return response.data;
+};
+
+export const getPromedioFormativo = async (idMatricula, trimestre) => {
+    const response = await api.get(`/api/rpc/calificaciones/promedio-formativo/${idMatricula}/${trimestre}`);
+    return response.data;
+};
+
+export const getPromedioFinal = async (idMatricula, trimestre) => {
+    const response = await api.get(`/api/rpc/calificaciones/promedio-final/${idMatricula}/${trimestre}`);
+    return response.data;
+};
+
+export const registrarCalificacion = async (data) => {
+    const response = await api.post(`/api/rpc/calificaciones/registrar`, data);
+    return response.data;
+};
+

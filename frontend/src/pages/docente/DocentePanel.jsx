@@ -3,6 +3,7 @@ import Layout from "../../components/Layout";
 import { getMisAsignaciones, getAsistenciaPorAsignacionYFecha } from '../../services/docente/docenteService';
 import DocenteActividades from "./DocenteActividades";
 import DocenteAsistencia from "./DocenteAsistencia";
+import DocenteCalificaciones from "./DocenteCalificaciones";
 
 export default function DocentePanel() {
     const [seccion, setSeccion] = useState("panel");
@@ -210,9 +211,9 @@ export default function DocentePanel() {
                 </div>
             )}
 
-            {seccion === "actividades" && <DocenteActividades asignacionActiva={asignacionActiva} />}
+            {seccion === "actividades" && <DocenteActividades asignacionActiva={asignacionActiva} setSeccion={setSeccion} />}
             {seccion === "asistencia" && <DocenteAsistencia asignacionActiva={asignacionActiva} />}
-            {seccion === "calificaciones" && <div className="text-slate-500">Módulo de Calificaciones en construcción (Fase E).</div>}
+            {seccion === "calificaciones" && <DocenteCalificaciones asignacionActiva={asignacionActiva} />}
             {seccion === "seguimiento" && <div className="text-slate-500">Módulo de Seguimiento en construcción (Fase F).</div>}
             {seccion === "reportes" && <div className="text-slate-500">Módulo de Reportes en construcción (Fase G).</div>}
         </Layout>
