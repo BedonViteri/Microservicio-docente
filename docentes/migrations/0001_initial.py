@@ -8,10 +8,7 @@ class Migration(migrations.Migration):
     dependencies = []
 
     operations = [
-        migrations.RunSQL(
-            sql="CREATE SCHEMA IF NOT EXISTS sga_docente;",
-            reverse_sql=migrations.RunSQL.noop,
-        ),
+        # Removed Postgres-specific CREATE SCHEMA for local SQLite runs.
         migrations.CreateModel(
             name="PeriodoEvaluacion",
             fields=[
@@ -23,7 +20,7 @@ class Migration(migrations.Migration):
                 ("fecha_fin", models.DateField()),
                 ("activo", models.BooleanField(default=True)),
             ],
-            options={"db_table": 'sga_docente"."periodos_evaluacion', "ordering": ["id_ano_lectivo", "fecha_inicio"]},
+            options={"db_table": "periodos_evaluacion", "ordering": ["id_ano_lectivo", "fecha_inicio"]},
         ),
         migrations.CreateModel(
             name="Actividad",
@@ -40,7 +37,7 @@ class Migration(migrations.Migration):
                 ("fecha_creacion", models.DateTimeField(auto_now_add=True)),
                 ("id_periodo", models.ForeignKey(db_column="id_periodo", on_delete=django.db.models.deletion.PROTECT, related_name="actividades", to="docentes.periodoevaluacion")),
             ],
-            options={"db_table": 'sga_docente"."actividades', "ordering": ["-fecha_entrega", "id_actividad"]},
+            options={"db_table": "actividades", "ordering": ["-fecha_entrega", "id_actividad"]},
         ),
         migrations.CreateModel(
             name="Asistencia",
@@ -56,7 +53,7 @@ class Migration(migrations.Migration):
                 ("fecha_actualizacion", models.DateTimeField(auto_now=True)),
                 ("id_periodo", models.ForeignKey(db_column="id_periodo", on_delete=django.db.models.deletion.PROTECT, related_name="asistencias", to="docentes.periodoevaluacion")),
             ],
-            options={"db_table": 'sga_docente"."asistencias', "ordering": ["-fecha", "id_matricula"]},
+            options={"db_table": "asistencias", "ordering": ["-fecha", "id_matricula"]},
         ),
         migrations.CreateModel(
             name="Calificacion",
@@ -71,7 +68,7 @@ class Migration(migrations.Migration):
                 ("fecha_actualizacion", models.DateTimeField(auto_now=True)),
                 ("id_actividad", models.ForeignKey(db_column="id_actividad", on_delete=django.db.models.deletion.CASCADE, related_name="calificaciones", to="docentes.actividad")),
             ],
-            options={"db_table": 'sga_docente"."calificaciones', "ordering": ["-fecha_registro"]},
+            options={"db_table": "calificaciones", "ordering": ["-fecha_registro"]},
         ),
         migrations.CreateModel(
             name="PromedioAnual",
@@ -85,7 +82,7 @@ class Migration(migrations.Migration):
                 ("registrado_por", models.IntegerField(blank=True, null=True)),
                 ("calculado_en", models.DateTimeField(auto_now=True)),
             ],
-            options={"db_table": 'sga_docente"."promedios_anuales'},
+            options={"db_table": "promedios_anuales"},
         ),
         migrations.CreateModel(
             name="PromedioTrimestral",
@@ -100,7 +97,7 @@ class Migration(migrations.Migration):
                 ("calculado_en", models.DateTimeField(auto_now=True)),
                 ("id_periodo", models.ForeignKey(db_column="id_periodo", on_delete=django.db.models.deletion.PROTECT, related_name="promedios_trimestrales", to="docentes.periodoevaluacion")),
             ],
-            options={"db_table": 'sga_docente"."promedios_trimestrales'},
+            options={"db_table": "promedios_trimestrales"},
         ),
         migrations.CreateModel(
             name="ResumenAsistencia",
@@ -115,7 +112,7 @@ class Migration(migrations.Migration):
                 ("calculado_en", models.DateTimeField(auto_now=True)),
                 ("id_periodo", models.ForeignKey(db_column="id_periodo", on_delete=django.db.models.deletion.PROTECT, related_name="resumenes_asistencia", to="docentes.periodoevaluacion")),
             ],
-            options={"db_table": 'sga_docente"."resumen_asistencia'},
+            options={"db_table": "resumen_asistencia"},
         ),
         migrations.CreateModel(
             name="SeguimientoAcademico",
@@ -131,7 +128,7 @@ class Migration(migrations.Migration):
                 ("fecha_registro", models.DateTimeField(auto_now_add=True)),
                 ("id_periodo", models.ForeignKey(db_column="id_periodo", on_delete=django.db.models.deletion.PROTECT, related_name="seguimientos", to="docentes.periodoevaluacion")),
             ],
-            options={"db_table": 'sga_docente"."seguimiento_academico', "ordering": ["-fecha_evento", "-fecha_registro"]},
+            options={"db_table": "seguimiento_academico", "ordering": ["-fecha_evento", "-fecha_registro"]},
         ),
         migrations.CreateModel(
             name="PromedioAnualDetalle",
@@ -140,7 +137,7 @@ class Migration(migrations.Migration):
                 ("id_promedio_anual", models.ForeignKey(db_column="id_promedio_anual", on_delete=django.db.models.deletion.CASCADE, related_name="detalles", to="docentes.promedioanual")),
                 ("id_promedio_trim", models.ForeignKey(db_column="id_promedio_trim", on_delete=django.db.models.deletion.PROTECT, related_name="detalles_anuales", to="docentes.promediotrimestral")),
             ],
-            options={"db_table": 'sga_docente"."promedios_anuales_detalle'},
+            options={"db_table": "promedios_anuales_detalle"},
         ),
         migrations.AddConstraint(
             model_name="asistencia",

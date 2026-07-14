@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-import actividades_pb2 as actividades__pb2
+from docentes.grpc_services import actividades_pb2 as actividades__pb2
 
 GRPC_GENERATED_VERSION = '1.65.1'
 GRPC_VERSION = grpc.__version__
