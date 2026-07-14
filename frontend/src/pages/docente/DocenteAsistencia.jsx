@@ -18,6 +18,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
     const [guardando, setGuardando] = useState(false);
     const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
     const [seccionActiva, setSeccionActiva] = useState('diario'); // 'diario', 'historial', 'resumen'
+    const [subVistaResumen, setSubVistaResumen] = useState('general'); // 'general', 'dias' (matriz)
     const [autoLlenadoActivo, setAutoLlenadoActivo] = useState(false);
 
     const hoyStr = new Date().toISOString().split('T')[0];
@@ -243,7 +244,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
 
     return (
         <div>
-            {/* Encabezado Simple (Igual a Actividades y Panel Principal) */}
+            {/* Encabezado Simple */}
             <div className="flex justify-between items-end mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-800">Asistencia</h1>
@@ -273,7 +274,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                 )}
             </div>
 
-            {/* Banner de Curso Seleccionado (Igual a Actividades) */}
+            {/* Banner de Curso Seleccionado */}
             {asignacionActiva ? (
                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-6 flex justify-between items-center">
                     <div>
@@ -346,19 +347,17 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                     <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
                                         <th className="px-6 py-3 font-semibold">Estudiante</th>
                                         <th className="px-6 py-3 font-semibold text-center">Estado</th>
-                                        <th className="px-6 py-3 font-semibold">Justificación / Observación</th>
+                                        <th className="px-6 py-3 font-semibold max-w-[200px]">Justificación / Observación</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 text-sm">
                                     {estudiantes.map((est) => {
                                         const asis = asistencias[est.idMatricula] || { estado: 'PRESENTE', justificacion: '' };
-                                        const yaRegistrado = !!asis.idAsistencia;
                                         
                                         return (
                                             <tr key={est.idMatricula} className="hover:bg-slate-50 transition">
                                                 <td className="px-6 py-4 font-medium text-slate-800">
                                                     {est.estudiante.apellidos} {est.estudiante.nombres}
-                                                    {yaRegistrado && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">Registrado</span>}
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="inline-flex bg-slate-100 rounded-lg p-1">
@@ -368,7 +367,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                                 type="button"
                                                                 disabled={esFechaFutura}
                                                                 onClick={() => handleEstadoChange(est.idMatricula, estado)}
-                                                                className={`px-3 py-1 rounded-md text-xs font-semibold transition ${
+                                                                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
                                                                     asis.estado === estado 
                                                                         ? estado === 'PRESENTE' ? 'bg-green-500 text-white shadow-sm' 
                                                                         : estado === 'AUSENTE' ? 'bg-red-500 text-white shadow-sm'
@@ -377,19 +376,24 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                                         : 'text-slate-500 hover:bg-slate-200'
                                                                 }`}
                                                             >
-                                                                {estado === 'PRESENTE' ? 'P' : estado === 'AUSENTE' ? 'A' : estado === 'JUSTIFICADO' ? 'J' : 'AT'}
+                                                                <span className="hidden md:inline">
+                                                                    {estado === 'PRESENTE' ? 'Presente' : estado === 'AUSENTE' ? 'Ausente' : estado === 'JUSTIFICADO' ? 'Justificado' : 'Atraso'}
+                                                                </span>
+                                                                <span className="inline md:hidden">
+                                                                    {estado === 'PRESENTE' ? 'P' : estado === 'AUSENTE' ? 'A' : estado === 'JUSTIFICADO' ? 'J' : 'AT'}
+                                                                </span>
                                                             </button>
                                                         ))}
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 max-w-[200px]">
                                                     <input 
                                                         type="text" 
                                                         value={asis.justificacion || ''}
                                                         onChange={(e) => handleJustificacionChange(est.idMatricula, e.target.value)}
                                                         disabled={esFechaFutura || (asis.estado !== 'JUSTIFICADO' && asis.estado !== 'ATRASO' && asis.estado !== 'AUSENTE')}
-                                                        placeholder={asis.estado === 'JUSTIFICADO' ? 'Indique motivo del justificativo...' : ''}
-                                                        className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
+                                                        placeholder={asis.estado === 'JUSTIFICADO' ? 'Justificar...' : ''}
+                                                        className="w-full px-2 py-1 border border-slate-200 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
                                                     />
                                                 </td>
                                             </tr>
@@ -464,17 +468,80 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                 </div>
             )}
 
-            {/* VISTA 3: RESUMEN (MATRIZ GENERAL DE ASISTENCIAS) */}
+            {/* VISTA 3: RESUMEN (VISTA GENERAL / VISTA POR DIAS DETALLADA) */}
             {seccionActiva === 'resumen' && asignacionActiva && (
                 <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm p-6 space-y-6">
-                    <div>
-                        <h3 className="text-base font-bold text-slate-800">Matriz de Asistencia del Periodo</h3>
-                        <p className="text-slate-500 text-xs mt-1">Registro diario individual de cada estudiante y porcentaje de cumplimiento.</p>
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-base font-bold text-slate-800">Resumen del Periodo Académico</h3>
+                            <p className="text-slate-500 text-xs mt-1">Estadísticas acumuladas generales y detalle diario por alumno.</p>
+                        </div>
+                        {/* Selector de sub-vistas */}
+                        <div className="bg-slate-100 p-1 rounded-lg inline-flex text-xs shadow-sm">
+                            <button
+                                onClick={() => setSubVistaResumen('general')}
+                                className={`px-3 py-1.5 rounded-md font-medium transition ${subVistaResumen === 'general' ? 'bg-white shadow-sm text-blue-600 font-semibold' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Vista General
+                            </button>
+                            <button
+                                onClick={() => setSubVistaResumen('dias')}
+                                className={`px-3 py-1.5 rounded-md font-medium transition ${subVistaResumen === 'dias' ? 'bg-white shadow-sm text-blue-600 font-semibold' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                Vista por Días
+                            </button>
+                        </div>
                     </div>
 
                     {loading ? (
-                        <div className="text-center py-10 text-slate-500">Cargando matriz general...</div>
+                        <div className="text-center py-10 text-slate-500">Cargando datos del periodo...</div>
+                    ) : subVistaResumen === 'general' ? (
+                        /* SUB-VISTA 1: VISTA GENERAL (SOLO SUMATORIAS) */
+                        <div className="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table className="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr className="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                                        <th className="px-6 py-3 font-semibold">Estudiante</th>
+                                        <th className="px-6 py-3 font-semibold text-center text-green-600">Presentes (P)</th>
+                                        <th className="px-6 py-3 font-semibold text-center text-red-600">Ausentes (A)</th>
+                                        <th className="px-6 py-3 font-semibold text-center text-blue-600">Justificados (J)</th>
+                                        <th className="px-6 py-3 font-semibold text-center text-yellow-600">Atrasos (AT)</th>
+                                        <th className="px-6 py-3 font-semibold text-center">% Cumplimiento</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 text-slate-700">
+                                    {estudiantes.map((est) => {
+                                        const res = resumenes.find(r => r.idMatricula === est.idMatricula) || {
+                                            totalPresentes: 0, totalAusentes: 0, totalJustificados: 0, totalAtrasos: 0, porcentajeAsistencia: 0
+                                        };
+                                        const pct = res.porcentajeAsistencia;
+                                        
+                                        return (
+                                            <tr key={est.idMatricula} className="hover:bg-slate-50 transition">
+                                                <td className="px-6 py-4 font-medium text-slate-800">
+                                                    {est.estudiante.apellidos} {est.estudiante.nombres}
+                                                </td>
+                                                <td className="px-6 py-4 text-center font-bold text-green-600">{res.totalPresentes}</td>
+                                                <td className="px-6 py-4 text-center font-bold text-red-600">{res.totalAusentes}</td>
+                                                <td className="px-6 py-4 text-center font-bold text-blue-600">{res.totalJustificados}</td>
+                                                <td className="px-6 py-4 text-center font-bold text-yellow-600">{res.totalAtrasos}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className={`px-2.5 py-1 rounded-full font-bold text-xs ${
+                                                        pct >= 80 ? 'bg-green-100 text-green-700' :
+                                                        pct >= 70 ? 'bg-yellow-100 text-yellow-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                        {pct.toFixed(1)}%
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
                     ) : (
+                        /* SUB-VISTA 2: VISTA DETALLADA POR DIAS (MATRIZ COMPLETA) */
                         <div className="overflow-x-auto border border-slate-200 rounded-lg">
                             <table className="w-full text-left border-collapse text-xs">
                                 <thead>
@@ -505,7 +572,6 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                     {est.estudiante.apellidos} {est.estudiante.nombres}
                                                 </td>
                                                 
-                                                {/* Celdas de Fechas del historial */}
                                                 {fechasUnicas.map(f => {
                                                     const rec = todosLosRegistros.find(r => 
                                                         (r.id_matricula !== undefined ? r.id_matricula : r.idMatricula) === est.idMatricula && r.fecha === f
@@ -539,13 +605,11 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                     );
                                                 })}
                                                 
-                                                {/* Acumulados */}
                                                 <td className="px-3 py-3 text-center font-semibold text-green-600 border-l border-slate-200">{res.totalPresentes}</td>
                                                 <td className="px-3 py-3 text-center font-semibold text-rose-600">{res.totalAusentes}</td>
                                                 <td className="px-3 py-3 text-center font-semibold text-blue-600">{res.totalJustificados}</td>
                                                 <td className="px-3 py-3 text-center font-semibold text-amber-600">{res.totalAtrasos}</td>
                                                 
-                                                {/* Porcentaje Sticky */}
                                                 <td className="px-4 py-3 text-center sticky right-0 bg-white z-10 border-l border-slate-200 font-bold">
                                                     <span className={`px-2 py-1 rounded text-[11px] font-extrabold ${
                                                         pct >= 80 ? 'bg-green-50 text-green-700 border border-green-150' :
@@ -558,13 +622,6 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                             </tr>
                                         );
                                     })}
-                                    {estudiantes.length === 0 && (
-                                        <tr>
-                                            <td colSpan={fechasUnicas.length + 6} className="px-6 py-10 text-center text-slate-500">
-                                                No hay datos generales para mostrar.
-                                            </td>
-                                        </tr>
-                                    )}
                                 </tbody>
                             </table>
                         </div>
