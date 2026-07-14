@@ -6,7 +6,7 @@ import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-app_env = os.environ.get("APP_ENV", "production")
+app_env = os.environ.get("APP_ENV", "local")
 
 if app_env == "local":
     env_local = BASE_DIR / ".env.local"
