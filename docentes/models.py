@@ -183,7 +183,7 @@ class PromedioTrimestral(models.Model):
     promedio_formativo = models.DecimalField(max_digits=4, decimal_places=2, default=0)
     nota_sumativa = models.DecimalField(max_digits=4, decimal_places=2, default=0)
     promedio_trimestral = models.DecimalField(max_digits=4, decimal_places=2, default=0)
-    nota_cualitativa = models.CharField(max_length=3, choices=NotaCualitativa.choices)
+    nota_cualitativa = models.CharField(max_length=10, choices=NotaCualitativa.choices)
     calculado_en = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -202,7 +202,7 @@ class PromedioAnual(models.Model):
     id_asignacion = models.IntegerField()
     id_ano_lectivo = models.IntegerField()
     promedio_anual = models.DecimalField(max_digits=4, decimal_places=2, default=0)
-    nota_cualitativa = models.CharField(max_length=3, choices=NotaCualitativa.choices)
+    nota_cualitativa = models.CharField(max_length=10, choices=NotaCualitativa.choices)
     registrado_por = models.IntegerField(blank=True, null=True)
     calculado_en = models.DateTimeField(auto_now=True)
 
