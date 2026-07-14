@@ -8,11 +8,12 @@ export default function DocenteActividades({ asignacionActiva }) {
     const [actividades, setActividades] = useState([]);
     const [estudiantes, setEstudiantes] = useState([]);
     const [calificacionesMap, setCalificacionesMap] = useState({}); // { [actId]: [ { idMatricula, nota } ] }
+    const [calificacionesOriginales, setCalificacionesOriginales] = useState({}); // { [actId]: { [matriculaId]: nota } }
     const [loading, setLoading] = useState(false);
+    const [guardando, setGuardando] = useState(false);
     const [vistaModo, setVistaModo] = useState("carpetas"); // 'carpetas' | 'tarjetas'
     const [selectedFolder, setSelectedFolder] = useState(null); // null o tipo de actividad (ej. 'TAREA')
     const [gradingActivity, setGradingActivity] = useState(null); // null o objeto actividad activa para calificar
-    const [savingGradingCells, setSavingGradingCells] = useState({}); // { [matriculaId]: boolean }
     const [mensajeFeedback, setMensajeFeedback] = useState({ tipo: "", texto: "" });
     const asignacionSel = asignacionActiva?.idAsignacion || "";
 
@@ -36,6 +37,7 @@ export default function DocenteActividades({ asignacionActiva }) {
             setActividades([]);
             setEstudiantes([]);
             setCalificacionesMap({});
+            setCalificacionesOriginales({});
             setGradingActivity(null);
         }
     }, [asignacionSel]);
@@ -67,15 +69,23 @@ export default function DocenteActividades({ asignacionActiva }) {
 
             // Agrupar calificaciones por idActividad
             const grouped = {};
+            const originals = {};
+            
             allCalificaciones.forEach(c => {
                 const actId = c.idActividad;
                 if (!grouped[actId]) {
                     grouped[actId] = [];
                 }
                 grouped[actId].push(c);
+                
+                if (!originals[actId]) {
+                    originals[actId] = {};
+                }
+                originals[actId][c.idMatricula] = c.nota;
             });
 
             setCalificacionesMap(grouped);
+            setCalificacionesOriginales(originals);
             setActividades(data);
         } catch (error) {
             console.error("[React Debug - Actividades] Error cargando actividades:", error);
@@ -89,7 +99,7 @@ export default function DocenteActividades({ asignacionActiva }) {
         const totalCount = estudiantes.length;
         
         // Calificados reales
-        const gradedCalifs = califs.filter(c => c.nota !== undefined && c.nota !== null);
+        const gradedCalifs = califs.filter(c => c.nota !== undefined && c.nota !== null && c.nota !== "");
         const gradedCount = gradedCalifs.length;
         
         // Calcular promedio
@@ -116,6 +126,23 @@ export default function DocenteActividades({ asignacionActiva }) {
     };
 
     const handleGradingNotaChange = (matriculaId, value) => {
+        // Filtrar caracteres no numéricos y solo permitir punto decimal
+        let cleanValue = value.replace(/[^0-9.]/g, '');
+        
+        // Evitar múltiples puntos
+        const parts = cleanValue.split('.');
+        if (parts.length > 2) {
+            cleanValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Limitar rango máximo a 10
+        if (cleanValue !== "") {
+            const num = parseFloat(cleanValue);
+            if (!isNaN(num) && num > 10) {
+                cleanValue = "10";
+            }
+        }
+        
         const actId = gradingActivity.idActividad;
         
         // Actualizar el valor en calificacionesMap localmente
@@ -125,9 +152,9 @@ export default function DocenteActividades({ asignacionActiva }) {
             
             let newList;
             if (existing) {
-                newList = currentList.map(c => c.idMatricula === matriculaId ? { ...c, nota: value } : c);
+                newList = currentList.map(c => c.idMatricula === matriculaId ? { ...c, nota: cleanValue } : c);
             } else {
-                newList = [...currentList, { idActividad: actId, idMatricula: matriculaId, nota: value }];
+                newList = [...currentList, { idActividad: actId, idMatricula: matriculaId, nota: cleanValue }];
             }
             
             return {
@@ -137,53 +164,58 @@ export default function DocenteActividades({ asignacionActiva }) {
         });
     };
 
-    const handleGradingNotaSave = async (matriculaId, originalValue) => {
+    const handleGuardarCalificaciones = async () => {
         const actId = gradingActivity.idActividad;
         const currentList = calificacionesMap[actId] || [];
-        const record = currentList.find(c => c.idMatricula === matriculaId);
-        const currentValue = record ? record.nota : "";
-
-        if (currentValue === originalValue) return;
-
-        // Validar nota
-        if (currentValue !== "" && currentValue !== undefined && currentValue !== null) {
-            const num = parseFloat(currentValue);
-            if (isNaN(num) || num < 0 || num > 10) {
-                setMensajeFeedback({ tipo: "error", texto: "La nota debe ser un número entre 0.00 y 10.00." });
-                // Revertir nota
-                handleGradingNotaChange(matriculaId, originalValue || "");
-                return;
+        const originalMap = calificacionesOriginales[actId] || {};
+        
+        const modifiedList = [];
+        
+        for (const est of estudiantes) {
+            const record = currentList.find(c => c.idMatricula === est.idMatricula);
+            const currentValue = record ? record.nota : "";
+            const originalValue = originalMap[est.idMatricula] !== undefined ? originalMap[est.idMatricula] : "";
+            
+            if (currentValue.toString() !== originalValue.toString()) {
+                if (currentValue !== "" && currentValue !== undefined && currentValue !== null) {
+                    const num = parseFloat(currentValue);
+                    if (isNaN(num) || num < 0 || num > 10) {
+                        setMensajeFeedback({ tipo: "error", texto: `La nota de un estudiante debe ser un número entre 0.00 y 10.00.` });
+                        return;
+                    }
+                    modifiedList.push({
+                        idMatricula: est.idMatricula,
+                        nota: num
+                    });
+                }
             }
-        } else {
+        }
+        
+        if (modifiedList.length === 0) {
+            setMensajeFeedback({ tipo: "success", texto: "No se detectaron cambios para guardar." });
             return;
         }
-
+        
         try {
-            setSavingGradingCells(prev => ({ ...prev, [matriculaId]: true }));
+            setGuardando(true);
             setMensajeFeedback({ tipo: "", texto: "" });
-
-            await registrarCalificacion({
-                idMatricula: parseInt(matriculaId),
-                idActividad: parseInt(actId),
-                nota: parseFloat(currentValue),
-                trimestre: 1 // Por defecto trimestre 1 para actividades
-            });
-
-            // Actualizar la lista local con el valor numérico
-            setCalificacionesMap(prev => {
-                const list = prev[actId] || [];
-                return {
-                    ...prev,
-                    [actId]: list.map(c => c.idMatricula === matriculaId ? { ...c, nota: parseFloat(currentValue), notaCualitativa: getNotaCualitativa(currentValue) } : c)
-                };
-            });
+            
+            await Promise.all(modifiedList.map(async (m) => {
+                await registrarCalificacion({
+                    idMatricula: m.idMatricula,
+                    idActividad: actId,
+                    nota: m.nota,
+                    trimestre: 1
+                });
+            }));
+            
+            setMensajeFeedback({ tipo: "success", texto: "Calificaciones guardadas exitosamente." });
+            await cargarActividades(asignacionSel);
         } catch (error) {
-            console.error("Error al registrar calificación de la actividad:", error);
-            setMensajeFeedback({ tipo: "error", texto: "No se pudo guardar la calificación." });
-            // Revertir nota
-            handleGradingNotaChange(matriculaId, originalValue || "");
+            console.error("Error guardando calificaciones:", error);
+            setMensajeFeedback({ tipo: "error", texto: "Ocurrió un error al guardar las calificaciones." });
         } finally {
-            setSavingGradingCells(prev => ({ ...prev, [matriculaId]: false }));
+            setGuardando(false);
         }
     };
 
@@ -375,11 +407,17 @@ export default function DocenteActividades({ asignacionActiva }) {
                                 </div>
                             </div>
                             
-                            <div className="text-right">
+                            <div className="flex items-center gap-3">
                                 <span className={`px-2.5 py-1 rounded text-xs font-extrabold uppercase ${getFolderColor(gradingActivity.tipo)}`}>
                                     {getTipoLabel(gradingActivity.tipo)}
                                 </span>
-                                <p className="text-slate-400 text-[10px] mt-1 font-medium">Entrega: {gradingActivity.fechaEntrega}</p>
+                                <button
+                                    onClick={handleGuardarCalificaciones}
+                                    disabled={guardando}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 shadow-sm"
+                                >
+                                    {guardando ? 'Guardando...' : 'Guardar Calificaciones'}
+                                </button>
                             </div>
                         </div>
 
@@ -390,7 +428,7 @@ export default function DocenteActividades({ asignacionActiva }) {
                                     <tr className="bg-slate-50 border-b border-slate-200 text-[10px] text-slate-500 uppercase tracking-wider">
                                         <th className="px-6 py-3 font-semibold">Estudiante</th>
                                         <th className="px-6 py-3 font-semibold text-center">Estado de Entrega</th>
-                                        <th className="px-6 py-3 font-semibold text-center">Nota (0.0 - 10.0)</th>
+                                        <th className="px-6 py-3 font-semibold text-center">Nota (Separador: '.')</th>
                                         <th className="px-6 py-3 font-semibold">Equivalencia Cualitativa</th>
                                     </tr>
                                 </thead>
@@ -400,8 +438,6 @@ export default function DocenteActividades({ asignacionActiva }) {
                                         const cRecord = califs.find(c => c.idMatricula === est.idMatricula);
                                         const notaVal = cRecord ? cRecord.nota : "";
                                         const cualitativa = cRecord ? cRecord.notaCualitativa || getNotaCualitativa(cRecord.nota) : "";
-                                        
-                                        const isSaving = savingGradingCells[est.idMatricula];
                                         const haEntregado = notaVal !== "" && notaVal !== undefined && notaVal !== null;
                                         
                                         return (
@@ -418,32 +454,20 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                         {haEntregado ? 'Calificado' : 'Sin Calificar'}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-2 text-center relative">
-                                                    <div className="inline-flex items-center gap-1.5 justify-center">
-                                                        <input 
-                                                            type="text"
-                                                            value={notaVal}
-                                                            placeholder="—"
-                                                            disabled={isSaving}
-                                                            onChange={(e) => handleGradingNotaChange(est.idMatricula, e.target.value)}
-                                                            onBlur={() => handleGradingNotaSave(est.idMatricula, notaVal)}
-                                                            className={`w-14 px-2 py-1 text-center font-bold text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
-                                                                haEntregado && parseFloat(notaVal) < 7 
-                                                                    ? 'bg-red-50 text-red-650 border-red-200' 
-                                                                    : haEntregado 
-                                                                        ? 'bg-green-50 text-green-700 border-green-200' 
-                                                                        : 'border-slate-200 text-slate-400 bg-slate-50/50'
-                                                            }`}
-                                                        />
-                                                        {isSaving && (
-                                                            <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                                                <svg className="animate-spin h-3.5 w-3.5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                </svg>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                <td className="px-6 py-2 text-center">
+                                                    <input 
+                                                        type="text"
+                                                        value={notaVal}
+                                                        placeholder="—"
+                                                        onChange={(e) => handleGradingNotaChange(est.idMatricula, e.target.value)}
+                                                        className={`w-16 px-2 py-1 text-center font-bold text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                                                            haEntregado && parseFloat(notaVal) < 7 
+                                                                ? 'bg-red-50 text-red-650 border-red-200' 
+                                                                : haEntregado 
+                                                                    ? 'bg-green-50 text-green-700 border-green-200' 
+                                                                    : 'border-slate-200 text-slate-400 bg-slate-50/50'
+                                                        }`}
+                                                    />
                                                 </td>
                                                 <td className="px-6 py-4 font-bold">
                                                     {cualitativa && (
@@ -462,6 +486,17 @@ export default function DocenteActividades({ asignacionActiva }) {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Leyenda explicativa cualitativa */}
+                        <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 space-y-1">
+                            <p className="font-bold text-slate-700">Leyenda de Equivalencias Cualitativas (Ministerio de Educación):</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                <li><strong className="text-blue-600">DAR</strong>: Domina los Aprendizajes Requeridos (9.00 - 10.00)</li>
+                                <li><strong className="text-green-600">AAR</strong>: Alcanza los Aprendizajes Requeridos (7.00 - 8.99)</li>
+                                <li><strong className="text-yellow-600">PAR</strong>: Próximo a Alcanzar los Aprendizajes Requeridos (5.00 - 6.99)</li>
+                                <li><strong className="text-red-600">NAR</strong>: No Alcanza los Aprendizajes Requeridos (menos de 5.00)</li>
+                            </ul>
                         </div>
                     </div>
                 ) : (

@@ -6,13 +6,16 @@ import {
     registrarCalificacion 
 } from "../../services/docente/docenteService";
 
+const PRIMARY = "#243A76";
+
 export default function DocenteCalificaciones({ asignacionActiva }) {
     const [estudiantes, setEstudiantes] = useState([]);
     const [actividades, setActividades] = useState([]);
     const [calificaciones, setCalificaciones] = useState({}); // { [matriculaId]: { [actId]: nota } }
-    const [savingCells, setSavingCells] = useState({}); // { [matriculaId-actId]: boolean }
-    const [trimestre, setTrimestre] = useState(1);
+    const [calificacionesOriginales, setCalificacionesOriginales] = useState({}); // { [matriculaId]: { [actId]: nota } }
     const [loading, setLoading] = useState(false);
+    const [guardando, setGuardando] = useState(false);
+    const [trimestre, setTrimestre] = useState(1);
     const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
     const asignacionId = asignacionActiva?.idAsignacion || "";
 
@@ -39,14 +42,19 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
             
             // 3. Cargar calificaciones de cada estudiante en paralelo
             const califsMap = {};
+            const originalsMap = {};
+            
             await Promise.all(ests.map(async (est) => {
                 try {
                     const data = await getCalificacionesEstudiante(est.idMatricula, trimestre);
                     const cList = data || [];
                     
                     califsMap[est.idMatricula] = {};
+                    originalsMap[est.idMatricula] = {};
+                    
                     cList.forEach(c => {
                         califsMap[est.idMatricula][c.idActividad] = c.nota;
+                        originalsMap[est.idMatricula][c.idActividad] = c.nota;
                     });
                 } catch (err) {
                     console.error("Error al cargar calificaciones del estudiante:", est.idMatricula, err);
@@ -54,6 +62,7 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
             }));
             
             setCalificaciones(califsMap);
+            setCalificacionesOriginales(originalsMap);
         } catch (error) {
             console.error("Error cargando calificaciones:", error);
             setMensaje({ tipo: "error", texto: "No se pudieron cargar los datos de calificaciones." });
@@ -63,70 +72,85 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
     };
 
     const handleNotaChange = (matriculaId, actId, value) => {
-        // Permitir editar el texto del input localmente
+        // Filtrar caracteres no numéricos y solo permitir punto decimal
+        let cleanValue = value.replace(/[^0-9.]/g, '');
+        
+        // Evitar múltiples puntos
+        const parts = cleanValue.split('.');
+        if (parts.length > 2) {
+            cleanValue = parts[0] + '.' + parts.slice(1).join('');
+        }
+        
+        // Limitar rango máximo a 10
+        if (cleanValue !== "") {
+            const num = parseFloat(cleanValue);
+            if (!isNaN(num) && num > 10) {
+                cleanValue = "10";
+            }
+        }
+
         setCalificaciones(prev => ({
             ...prev,
             [matriculaId]: {
                 ...prev[matriculaId],
-                [actId]: value
+                [actId]: cleanValue
             }
         }));
     };
 
-    const handleNotaSave = async (matriculaId, actId, originalValue) => {
-        const estCalif = calificaciones[matriculaId] || {};
-        const currentValue = estCalif[actId];
+    const handleGuardarCalificaciones = async () => {
+        const modifiedList = [];
         
-        // Si el valor no cambió, no guardar
-        if (currentValue === originalValue) return;
-        
-        // Validar que sea un número válido entre 0 y 10, o vacío
-        if (currentValue !== "" && currentValue !== undefined && currentValue !== null) {
-            const num = parseFloat(currentValue);
-            if (isNaN(num) || num < 0 || num > 10) {
-                setMensaje({ tipo: "error", texto: "La nota debe ser un número entre 0.00 y 10.00" });
-                // Revertir valor
-                setCalificaciones(prev => ({
-                    ...prev,
-                    [matriculaId]: {
-                        ...prev[matriculaId],
-                        [actId]: originalValue || ""
+        for (const est of estudiantes) {
+            const estCalif = calificaciones[est.idMatricula] || {};
+            const originalMap = calificacionesOriginales[est.idMatricula] || {};
+            
+            for (const act of actividades) {
+                const currentValue = estCalif[act.idActividad] !== undefined ? estCalif[act.idActividad] : "";
+                const originalValue = originalMap[act.idActividad] !== undefined ? originalMap[act.idActividad] : "";
+                
+                if (currentValue.toString() !== originalValue.toString()) {
+                    if (currentValue !== "" && currentValue !== undefined && currentValue !== null) {
+                        const num = parseFloat(currentValue);
+                        if (isNaN(num) || num < 0 || num > 10) {
+                            setMensaje({ tipo: "error", texto: "La nota de un estudiante debe ser un número entre 0.00 y 10.00." });
+                            return;
+                        }
+                        modifiedList.push({
+                            idMatricula: est.idMatricula,
+                            idActividad: act.idActividad,
+                            nota: num
+                        });
                     }
-                }));
-                return;
+                }
             }
-        } else {
-            // No enviar si es vacío (opcional, o podemos enviar 0)
+        }
+        
+        if (modifiedList.length === 0) {
+            setMensaje({ tipo: "success", texto: "No se detectaron cambios para guardar." });
             return;
         }
-
-        const cellKey = `${matriculaId}-${actId}`;
+        
         try {
-            setSavingCells(prev => ({ ...prev, [cellKey]: true }));
+            setGuardando(true);
             setMensaje({ tipo: "", texto: "" });
             
-            await registrarCalificacion({
-                idMatricula: parseInt(matriculaId),
-                idActividad: parseInt(actId),
-                nota: parseFloat(currentValue),
-                trimestre: parseInt(trimestre)
-            });
-            
-            // Recargar datos suavemente para actualizar promedios reales del backend y sincronía
-            // Pero mantenemos el valor local por comodidad
-        } catch (error) {
-            console.error("Error al registrar calificación:", error);
-            setMensaje({ tipo: "error", texto: "No se pudo guardar la calificación." });
-            // Revertir valor en caso de error
-            setCalificaciones(prev => ({
-                ...prev,
-                [matriculaId]: {
-                    ...prev[matriculaId],
-                    [actId]: originalValue || ""
-                }
+            await Promise.all(modifiedList.map(async (m) => {
+                await registrarCalificacion({
+                    idMatricula: m.idMatricula,
+                    idActividad: m.idActividad,
+                    nota: m.nota,
+                    trimestre: parseInt(trimestre)
+                });
             }));
+            
+            setMensaje({ tipo: "success", texto: "Calificaciones guardadas exitosamente." });
+            await cargarDatos();
+        } catch (error) {
+            console.error("Error al registrar calificaciones:", error);
+            setMensaje({ tipo: "error", texto: "Ocurrió un error al guardar las calificaciones." });
         } finally {
-            setSavingCells(prev => ({ ...prev, [cellKey]: false }));
+            setGuardando(false);
         }
     };
 
@@ -177,18 +201,28 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
                     <p className="text-slate-500 text-sm mt-1">Registre e ingrese las notas del curso para el trimestre seleccionado.</p>
                 </div>
                 
-                {/* Selector de Trimestre */}
+                {/* Controles de Trimestre y Guardado */}
                 {asignacionId && (
-                    <div className="bg-slate-100 p-1 rounded-lg inline-flex text-xs shadow-sm">
-                        {[1, 2, 3].map(t => (
-                            <button
-                                key={t}
-                                onClick={() => setTrimestre(t)}
-                                className={`px-4 py-1.5 rounded-md font-semibold transition ${trimestre === t ? 'bg-white shadow-sm text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                Trimestre {t}
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-4 flex-wrap">
+                        <div className="bg-slate-100 p-1 rounded-lg inline-flex text-xs shadow-sm">
+                            {[1, 2, 3].map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => setTrimestre(t)}
+                                    className={`px-4 py-1.5 rounded-md font-semibold transition ${trimestre === t ? 'bg-white shadow-sm text-blue-600 font-bold' : 'text-slate-500 hover:text-slate-700'}`}
+                                >
+                                    Trimestre {t}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <button
+                            onClick={handleGuardarCalificaciones}
+                            disabled={guardando || loading}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 shadow-sm"
+                        >
+                            {guardando ? 'Guardando...' : 'Guardar Calificaciones'}
+                        </button>
                     </div>
                 )}
             </div>
@@ -227,7 +261,7 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
                 loading ? (
                     <div className="text-center py-10 text-slate-500">Cargando planilla de calificaciones...</div>
                 ) : (
-                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm p-4 space-y-6">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse text-xs">
                                 <thead>
@@ -272,36 +306,23 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
                                                 {/* Celdas de Calificaciones */}
                                                 {actividades.map(act => {
                                                     const val = estCalif[act.idActividad] !== undefined ? estCalif[act.idActividad] : "";
-                                                    const cellKey = `${est.idMatricula}-${act.idActividad}`;
-                                                    const isSaving = savingCells[cellKey];
+                                                    const haEntregado = val !== "" && val !== undefined && val !== null;
                                                     
                                                     return (
-                                                        <td key={act.idActividad} className="px-3 py-2 text-center border-r border-slate-100 relative group">
-                                                            <div className="inline-flex items-center gap-1.5 justify-center">
-                                                                <input
-                                                                    type="text"
-                                                                    value={val}
-                                                                    placeholder="—"
-                                                                    disabled={isSaving}
-                                                                    onChange={(e) => handleNotaChange(est.idMatricula, act.idActividad, e.target.value)}
-                                                                    onBlur={() => handleNotaSave(est.idMatricula, act.idActividad, val)}
-                                                                    className={`w-12 px-1.5 py-1 text-center font-bold text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
-                                                                        val !== "" && parseFloat(val) < 7 
-                                                                            ? 'bg-red-50 text-red-600 border-red-200' 
-                                                                            : val !== "" 
-                                                                                ? 'bg-green-50 text-green-700 border-green-200' 
-                                                                                : 'border-slate-200 text-slate-400 bg-slate-50/50'
-                                                                    }`}
-                                                                />
-                                                                {isSaving && (
-                                                                    <div className="absolute right-1 top-1/2 -translate-y-1/2">
-                                                                        <svg className="animate-spin h-3.5 w-3.5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                                                        </svg>
-                                                                    </div>
-                                                                )}
-                                                            </div>
+                                                        <td key={act.idActividad} className="px-3 py-2 text-center border-r border-slate-100">
+                                                            <input
+                                                                type="text"
+                                                                value={val}
+                                                                placeholder="—"
+                                                                onChange={(e) => handleNotaChange(est.idMatricula, act.idActividad, e.target.value)}
+                                                                className={`w-12 px-1.5 py-1 text-center font-bold text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${
+                                                                    haEntregado && parseFloat(val) < 7 
+                                                                        ? 'bg-red-50 text-red-650 border-red-200' 
+                                                                        : haEntregado 
+                                                                            ? 'bg-green-50 text-green-700 border-green-200' 
+                                                                            : 'border-slate-200 text-slate-400 bg-slate-50/50'
+                                                                }`}
+                                                            />
                                                         </td>
                                                     );
                                                 })}
@@ -335,6 +356,17 @@ export default function DocenteCalificaciones({ asignacionActiva }) {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Leyenda explicativa cualitativa */}
+                        <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 space-y-1">
+                            <p className="font-bold text-slate-700">Leyenda de Equivalencias Cualitativas (Ministerio de Educación):</p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                                <li><strong className="text-blue-600">DAR</strong>: Domina los Aprendizajes Requeridos (9.00 - 10.00)</li>
+                                <li><strong className="text-green-600">AAR</strong>: Alcanza los Aprendizajes Requeridos (7.00 - 8.99)</li>
+                                <li><strong className="text-yellow-600">PAR</strong>: Próximo a Alcanzar los Aprendizajes Requeridos (5.00 - 6.99)</li>
+                                <li><strong className="text-red-600">NAR</strong>: No Alcanza los Aprendizajes Requeridos (menos de 5.00)</li>
+                            </ul>
                         </div>
                     </div>
                 )
