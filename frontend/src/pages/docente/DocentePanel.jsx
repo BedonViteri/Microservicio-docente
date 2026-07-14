@@ -59,8 +59,10 @@ export default function DocentePanel() {
                 console.error("[React Debug] Error al obtener asignaciones:", error);
             }
         };
-        fetchAsignaciones();
-    }, []);
+        if (seccion === "panel") {
+            fetchAsignaciones();
+        }
+    }, [seccion]);
 
     const menuItems = [
         {
@@ -165,7 +167,15 @@ export default function DocentePanel() {
                                         </div>
                                         <div>
                                             <p className="text-[10px] text-slate-400 uppercase font-medium">Asistencia</p>
-                                            <p className="text-xs font-semibold text-green-600 mt-0.5">{a.porcentajeAsistencia || 100.0}% promedio</p>
+                                            <p className={`text-xs font-semibold mt-0.5 ${
+                                                (a.porcentajeAsistencia !== undefined ? a.porcentajeAsistencia : 100.0) >= 80 
+                                                    ? 'text-green-600' 
+                                                    : (a.porcentajeAsistencia !== undefined ? a.porcentajeAsistencia : 100.0) >= 70 
+                                                        ? 'text-yellow-600' 
+                                                        : 'text-red-600'
+                                            }`}>
+                                                {(a.porcentajeAsistencia !== undefined ? a.porcentajeAsistencia : 100.0).toFixed(1)}% promedio
+                                            </p>
                                         </div>
                                         <div className="col-span-2">
                                             <p className="text-[10px] text-slate-400 uppercase font-medium">Promedio General</p>
