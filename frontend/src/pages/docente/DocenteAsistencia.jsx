@@ -7,7 +7,7 @@ import {
     actualizarAsistencia 
 } from '../../services/docente/docenteService';
 
-export default function DocenteAsistencia({ asignacionActiva }) {
+export default function DocenteAsistencia({ asignacionActiva, asignaciones, onAsignacionChange }) {
     const [estudiantes, setEstudiantes] = useState([]);
     const [asistencias, setAsistencias] = useState({});
     const [resumenes, setResumenes] = useState([]);
@@ -295,10 +295,27 @@ export default function DocenteAsistencia({ asignacionActiva }) {
             {asignacionActiva ? (
                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-6 flex justify-between items-center">
                     <div>
-                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Curso Seleccionado</p>
-                        <h2 className="text-base font-bold text-slate-700 mt-0.5">
-                            {asignacionActiva.grado?.nombre} — {asignacionActiva.asignatura?.nombre}
-                        </h2>
+                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Asignatura / Curso</p>
+                        {asignaciones && asignaciones.length > 0 ? (
+                            <select
+                                value={asignacionActiva.idAsignacion || ""}
+                                onChange={(e) => {
+                                    const selected = asignaciones.find(a => a.idAsignacion.toString() === e.target.value);
+                                    if (selected && onAsignacionChange) onAsignacionChange(selected);
+                                }}
+                                className="bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 mt-1 cursor-pointer"
+                            >
+                                {asignaciones.map(a => (
+                                    <option key={a.idAsignacion} value={a.idAsignacion}>
+                                        {a.grado?.nombre || a.grado} — {a.asignatura?.nombre || a.asignatura}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <h2 className="text-base font-bold text-slate-700 mt-0.5">
+                                {asignacionActiva.grado?.nombre} — {asignacionActiva.asignatura?.nombre}
+                            </h2>
+                        )}
                     </div>
                     <span className="text-xs text-slate-400 font-medium">
                         Periodo Lectivo: {asignacionActiva.anoLectivo?.nombre || "2026-2027"}

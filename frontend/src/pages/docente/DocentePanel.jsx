@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
-import { getMisAsignaciones, getAsistenciaPorAsignacionYFecha } from '../../services/docente/docenteService';
+import { getMisAsignaciones, getAsistenciaPorAsignacionYFecha, getEstudiantesPorAsignacion, getPromedioFinal, getPeriodosEvaluacion } from '../../services/docente/docenteService';
 import DocenteActividades from "./DocenteActividades";
 import DocenteAsistencia from "./DocenteAsistencia";
 import DocenteCalificaciones from "./DocenteCalificaciones";
@@ -16,6 +16,10 @@ export default function DocentePanel() {
                 console.log("[React Debug] Obteniendo asignaciones del docente...");
                 const data = await getMisAsignaciones();
                 console.log("[React Debug] Asignaciones recibidas:", data);
+                
+                // Obtener periodos de evaluación una sola vez
+                const pers = await getPeriodosEvaluacion();
+                const activePers = pers || [];
                 
                 // Calcular dinámicamente la asistencia real desde el historial
                 const enriched = await Promise.all(data.map(async (a) => {
@@ -40,13 +44,39 @@ export default function DocentePanel() {
                             ? ((totalPresentes + totalJustificados + totalAtrasos) / total) * 100 
                             : 100.0;
                         
+                        // Calcular promedio general del curso dinámicamente (promedio de los promedios anuales de los alumnos)
+                        const ests = await getEstudiantesPorAsignacion(a.idAsignacion);
+                        let promGeneral = 0.0;
+                        if (ests.length > 0) {
+                            const proms = await Promise.all(ests.map(async (est) => {
+                                try {
+                                    const termScores = await Promise.all(activePers.map(async (p) => {
+                                        const score = await getPromedioFinal(est.idMatricula, p.id_periodo);
+                                        const val = parseFloat(score);
+                                        return isNaN(val) ? 0.0 : val;
+                                    }));
+                                    const validTerms = termScores.filter(v => v > 0);
+                                    return validTerms.length > 0 ? (validTerms.reduce((s, v) => s + v, 0) / validTerms.length) : 0.0;
+                                } catch (e) {
+                                    return 0.0;
+                                }
+                            }));
+                            const validProms = proms.filter(p => p > 0);
+                            promGeneral = validProms.length > 0 ? (validProms.reduce((s, v) => s + v, 0) / validProms.length) : 0.0;
+                        }
+                        
                         return {
                             ...a,
-                            porcentajeAsistencia: parseFloat(porcentajeAsistenciaReal.toFixed(1))
+                            porcentajeAsistencia: parseFloat(porcentajeAsistenciaReal.toFixed(1)),
+                            promedioCalificaciones: parseFloat(promGeneral.toFixed(2))
                         };
                     } catch (err) {
-                        console.error(`Error calculando asistencia para asignación ${a.idAsignacion}:`, err);
-                        return a;
+                        console.error(`Error calculando datos para asignación ${a.idAsignacion}:`, err);
+                        return {
+                            ...a,
+                            porcentajeAsistencia: 100.0,
+                            promedioCalificaciones: 0.0
+                        };
                     }
                 }));
 
@@ -184,7 +214,12 @@ export default function DocentePanel() {
                                                 <svg className="w-3.5 h-3.5 text-yellow-400 fill-current" viewBox="0 0 20 20">
                                                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                                                 </svg>
-                                                <span className="text-xs font-bold text-slate-700">{a.promedioCalificaciones || "N/A"}/10</span>
+                                                <span className="text-xs font-bold text-slate-700">
+                                                    {a.promedioCalificaciones !== undefined && a.promedioCalificaciones !== null && !isNaN(a.promedioCalificaciones)
+                                                        ? a.promedioCalificaciones.toFixed(2)
+                                                        : "0.00"
+                                                    }/10
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -211,9 +246,9 @@ export default function DocentePanel() {
                 </div>
             )}
 
-            {seccion === "actividades" && <DocenteActividades asignacionActiva={asignacionActiva} setSeccion={setSeccion} />}
-            {seccion === "asistencia" && <DocenteAsistencia asignacionActiva={asignacionActiva} />}
-            {seccion === "calificaciones" && <DocenteCalificaciones asignacionActiva={asignacionActiva} />}
+            {seccion === "actividades" && <DocenteActividades asignacionActiva={asignacionActiva} setSeccion={setSeccion} asignaciones={asignaciones} onAsignacionChange={setAsignacionActiva} />}
+            {seccion === "asistencia" && <DocenteAsistencia asignacionActiva={asignacionActiva} asignaciones={asignaciones} onAsignacionChange={setAsignacionActiva} />}
+            {seccion === "calificaciones" && <DocenteCalificaciones asignacionActiva={asignacionActiva} asignaciones={asignaciones} onAsignacionChange={setAsignacionActiva} />}
             {seccion === "seguimiento" && <div className="text-slate-500">Módulo de Seguimiento en construcción (Fase F).</div>}
             {seccion === "reportes" && <div className="text-slate-500">Módulo de Reportes en construcción (Fase G).</div>}
         </Layout>

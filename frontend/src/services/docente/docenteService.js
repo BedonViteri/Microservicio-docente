@@ -87,3 +87,8 @@ export const registrarCalificacion = async (data) => {
     return response.data;
 };
 
+export const getPeriodosEvaluacion = async () => {
+    const response = await api.get(`/api/docente/actividades/periodos`);
+    return response.data;
+};
+

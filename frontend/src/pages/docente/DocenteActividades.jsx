@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import api from "../../config/axios";
-import { getActividadesPorAsignacion, getEstudiantesPorAsignacion, createActividad, updateActividad, deleteActividad, registrarCalificacion } from "../../services/docente/docenteService";
+import { getActividadesPorAsignacion, getEstudiantesPorAsignacion, createActividad, updateActividad, deleteActividad, registrarCalificacion, getPeriodosEvaluacion } from "../../services/docente/docenteService";
 
 const PRIMARY = "#243A76";
 
-export default function DocenteActividades({ asignacionActiva }) {
+export default function DocenteActividades({ asignacionActiva, setSeccion, asignaciones, onAsignacionChange }) {
     const [actividades, setActividades] = useState([]);
     const [estudiantes, setEstudiantes] = useState([]);
     const [calificacionesMap, setCalificacionesMap] = useState({}); // { [actId]: [ { idMatricula, nota } ] }
@@ -23,12 +23,27 @@ export default function DocenteActividades({ asignacionActiva }) {
         nombre: "",
         descripcion: "",
         tipo: "TAREA",
-        fechaEntrega: ""
+        fechaEntrega: "",
+        periodoId: 1
     });
 
     // Estados para modal de eliminación personalizado
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [actividadToDelete, setActividadToDelete] = useState(null);
+    const [periodos, setPeriodos] = useState([]);
+
+    useEffect(() => {
+        const fetchPeriods = async () => {
+            try {
+                const pers = await getPeriodosEvaluacion();
+                const sorted = (pers || []).sort((a, b) => a.id_periodo - b.id_periodo);
+                setPeriodos(sorted);
+            } catch (err) {
+                console.error("Error al cargar periodos en actividades:", err);
+            }
+        };
+        fetchPeriods();
+    }, []);
 
     useEffect(() => {
         if (asignacionSel) {
@@ -42,10 +57,10 @@ export default function DocenteActividades({ asignacionActiva }) {
         }
     }, [asignacionSel]);
 
-    const cargarActividades = async (asignacionId) => {
+    const cargarActividades = async (asignacionId, isSilent = false) => {
         try {
-            setLoading(true);
-            setMensajeFeedback({ tipo: "", texto: "" });
+            if (!isSilent) setLoading(true);
+            if (!isSilent) setMensajeFeedback({ tipo: "", texto: "" });
             console.log("[React Debug - Actividades] Cargando actividades para asignacion:", asignacionId);
             
             // 1. Obtener actividades de la asignación
@@ -90,7 +105,7 @@ export default function DocenteActividades({ asignacionActiva }) {
         } catch (error) {
             console.error("[React Debug - Actividades] Error cargando actividades:", error);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     };
 
@@ -213,7 +228,10 @@ export default function DocenteActividades({ asignacionActiva }) {
             }));
             
             setMensajeFeedback({ tipo: "success", texto: "Calificaciones guardadas exitosamente." });
-            await cargarActividades(asignacionSel);
+            setTimeout(() => {
+                setMensajeFeedback({ tipo: "", texto: "" });
+            }, 3000);
+            await cargarActividades(asignacionSel, true);
         } catch (error) {
             console.error("Error guardando calificaciones:", error);
             setMensajeFeedback({ tipo: "error", texto: "Ocurrió un error al guardar las calificaciones." });
@@ -229,7 +247,8 @@ export default function DocenteActividades({ asignacionActiva }) {
                 nombre: act.nombre,
                 descripcion: act.descripcion,
                 tipo: act.tipo,
-                fechaEntrega: act.fechaEntrega ? act.fechaEntrega.substring(0, 10) : "" 
+                fechaEntrega: act.fechaEntrega ? act.fechaEntrega.substring(0, 10) : "",
+                periodoId: act.idPeriodo || (periodos.length > 0 ? periodos[0].id_periodo : 1)
             });
         } else {
             setFormData({
@@ -237,7 +256,8 @@ export default function DocenteActividades({ asignacionActiva }) {
                 nombre: "",
                 descripcion: "",
                 tipo: selectedFolder || "TAREA",
-                fechaEntrega: ""
+                fechaEntrega: "",
+                periodoId: periodos.length > 0 ? periodos[0].id_periodo : 1
             });
         }
         setShowModal(true);
@@ -248,7 +268,7 @@ export default function DocenteActividades({ asignacionActiva }) {
         try {
             const payload = {
                 asignacionId: parseInt(asignacionSel),
-                periodoId: 1, 
+                periodoId: parseInt(formData.periodoId), 
                 nombre: formData.nombre,
                 descripcion: formData.descripcion,
                 tipo: formData.tipo,
@@ -363,10 +383,27 @@ export default function DocenteActividades({ asignacionActiva }) {
             {asignacionActiva ? (
                 <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-6 flex justify-between items-center">
                     <div>
-                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Curso Seleccionado</p>
-                        <h2 className="text-base font-bold text-slate-700 mt-0.5">
-                            {asignacionActiva.grado?.nombre} — {asignacionActiva.asignatura?.nombre}
-                        </h2>
+                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Asignatura / Curso</p>
+                        {asignaciones && asignaciones.length > 0 ? (
+                            <select
+                                value={asignacionActiva.idAsignacion || ""}
+                                onChange={(e) => {
+                                    const selected = asignaciones.find(a => a.idAsignacion.toString() === e.target.value);
+                                    if (selected && onAsignacionChange) onAsignacionChange(selected);
+                                }}
+                                className="bg-white border border-blue-200 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 mt-1 cursor-pointer"
+                            >
+                                {asignaciones.map(a => (
+                                    <option key={a.idAsignacion} value={a.idAsignacion}>
+                                        {a.grado?.nombre || a.grado} — {a.asignatura?.nombre || a.asignatura}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <h2 className="text-base font-bold text-slate-700 mt-0.5">
+                                {asignacionActiva.grado?.nombre} — {asignacionActiva.asignatura?.nombre}
+                            </h2>
+                        )}
                     </div>
                     <span className="text-xs text-slate-400 font-medium">
                         Periodo Lectivo: {asignacionActiva.anoLectivo?.nombre || "2026-2027"}
@@ -416,10 +453,9 @@ export default function DocenteActividades({ asignacionActiva }) {
                                 </span>
                                 <button
                                     onClick={handleGuardarCalificaciones}
-                                    disabled={guardando}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 shadow-sm"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm"
                                 >
-                                    {guardando ? 'Guardando...' : 'Guardar Calificaciones'}
+                                    Guardar Calificaciones
                                 </button>
                             </div>
                         </div>
@@ -748,6 +784,18 @@ export default function DocenteActividades({ asignacionActiva }) {
                                     <option value="TAREA">Tarea</option>
                                     <option value="TALLER">Taller</option>
                                     <option value="EXAMEN_TRIMESTRAL">Examen Trimestral</option>
+                                </select>
+                            </div>
+                            <div className="mb-4">
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Periodo / Trimestre</label>
+                                <select 
+                                    value={formData.periodoId}
+                                    onChange={(e) => setFormData({...formData, periodoId: parseInt(e.target.value)})}
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                >
+                                    {periodos.map(p => (
+                                        <option key={p.id_periodo} value={p.id_periodo}>{p.nombre}</option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="mb-4">
