@@ -3,11 +3,10 @@ import { getMisAsignaciones, getActividadesPorAsignacion, createActividad, updat
 
 const PRIMARY = "#243A76";
 
-export default function DocenteActividades() {
-    const [asignaciones, setAsignaciones] = useState([]);
-    const [asignacionSel, setAsignacionSel] = useState("");
+export default function DocenteActividades({ asignacionActiva }) {
     const [actividades, setActividades] = useState([]);
     const [loading, setLoading] = useState(false);
+    const asignacionSel = asignacionActiva?.idAsignacion || "";
 
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
@@ -19,27 +18,12 @@ export default function DocenteActividades() {
     });
 
     useEffect(() => {
-        cargarAsignaciones();
-    }, []);
-
-    useEffect(() => {
         if (asignacionSel) {
             cargarActividades(asignacionSel);
         } else {
             setActividades([]);
         }
     }, [asignacionSel]);
-
-    const cargarAsignaciones = async () => {
-        try {
-            console.log("[React Debug - Actividades] Cargando asignaciones...");
-            const data = await getMisAsignaciones();
-            console.log("[React Debug - Actividades] Asignaciones cargadas:", data);
-            setAsignaciones(data);
-        } catch (error) {
-            console.error("[React Debug - Actividades] Error cargando asignaciones:", error);
-        }
-    };
 
     const cargarActividades = async (asignacionId) => {
         try {
@@ -137,22 +121,23 @@ export default function DocenteActividades() {
                 )}
             </div>
 
-            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm mb-6">
-                <label className="block text-sm font-semibold text-slate-700 mb-2">Seleccione su Curso / Asignatura:</label>
-                <select
-                    value={asignacionSel}
-                    onChange={(e) => setAsignacionSel(e.target.value)}
-                    className="w-full max-w-md p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent text-sm"
-                    style={{ '--tw-ring-color': PRIMARY }}
-                >
-                    <option value="">-- Seleccionar Asignatura --</option>
-                    {asignaciones.map(a => (
-                        <option key={a.idAsignacion} value={a.idAsignacion}>
-                            {a.grado.nombre} - {a.asignatura.nombre}
-                        </option>
-                    ))}
-                </select>
-            </div>
+            {asignacionActiva ? (
+                <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl shadow-sm mb-6 flex justify-between items-center">
+                    <div>
+                        <p className="text-[10px] uppercase font-bold text-blue-500 tracking-wider">Curso Seleccionado</p>
+                        <h2 className="text-base font-bold text-slate-700 mt-0.5">
+                            {asignacionActiva.grado?.nombre} — {asignacionActiva.asignatura?.nombre}
+                        </h2>
+                    </div>
+                    <span className="text-xs text-slate-400 font-medium">
+                        Periodo Lectivo: {asignacionActiva.anoLectivo?.nombre || "2026-2027"}
+                    </span>
+                </div>
+            ) : (
+                <div className="bg-yellow-50 border border-yellow-100 p-6 rounded-xl text-center mb-6">
+                    <p className="text-yellow-700 font-medium text-sm">Por favor, seleccione una asignatura desde el Panel Principal para gestionar sus actividades.</p>
+                </div>
+            )}
 
             {asignacionSel ? (
                 loading ? (
