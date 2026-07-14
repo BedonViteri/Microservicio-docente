@@ -54,10 +54,11 @@ export default function DocenteAsistencia({ asignacionActiva }) {
             
             // Sobrescribir si ya hay registros
             registros.forEach(reg => {
-                nuevaAsistencia[reg.idMatricula] = {
+                const idMat = reg.id_matricula !== undefined ? reg.id_matricula : reg.idMatricula;
+                nuevaAsistencia[idMat] = {
                     estado: reg.estado,
                     justificacion: reg.justificacion || '',
-                    idAsistencia: reg.idAsistencia
+                    idAsistencia: reg.id_asistencia !== undefined ? reg.id_asistencia : reg.idAsistencia
                 };
             });
             
@@ -101,34 +102,61 @@ export default function DocenteAsistencia({ asignacionActiva }) {
             setGuardando(true);
             setMensaje({ tipo: '', texto: '' });
             
-            // Filtrar solo los que no tienen idAsistencia (los nuevos)
-            const nuevosRegistros = estudiantes
-                .filter(est => !asistencias[est.idMatricula].idAsistencia)
-                .map(est => ({
-                    idMatricula: est.idMatricula,
-                    estado: asistencias[est.idMatricula].estado,
-                    justificacion: asistencias[est.idMatricula].justificacion
-                }));
+            const response = await getAsistenciaPorAsignacionYFecha(asignacionActiva.idAsignacion, fecha);
+            const registrosCargados = response.asistencias || [];
+            
+            const nuevosRegistros = [];
+            const registrosModificados = [];
+            
+            estudiantes.forEach(est => {
+                const current = asistencias[est.idMatricula];
+                if (!current) return;
+                
+                const original = registrosCargados.find(r => (r.id_matricula !== undefined ? r.id_matricula : r.idMatricula) === est.idMatricula);
+                
+                if (!original) {
+                    nuevosRegistros.push({
+                        idMatricula: est.idMatricula,
+                        estado: current.estado,
+                        justificacion: current.justificacion || ''
+                    });
+                } else {
+                    const originalEstado = original.estado;
+                    const originalJust = original.justificacion || '';
+                    if (current.estado !== originalEstado || (current.justificacion || '') !== originalJust) {
+                        registrosModificados.push({
+                            idAsistencia: original.id_asistencia !== undefined ? original.id_asistencia : original.idAsistencia,
+                            estado: current.estado,
+                            justificacion: current.justificacion || ''
+                        });
+                    }
+                }
+            });
 
-            if (nuevosRegistros.length === 0) {
-                setMensaje({ tipo: 'warning', texto: 'Todos los estudiantes ya tienen registro para esta fecha.' });
+            if (nuevosRegistros.length === 0 && registrosModificados.length === 0) {
+                setMensaje({ tipo: 'warning', texto: 'No se detectaron cambios ni nuevos registros para guardar.' });
                 setGuardando(false);
                 return;
             }
 
-            const payload = {
-                idAsignacion: asignacionActiva.idAsignacion,
-                idPeriodo: 1, 
-                fecha: fecha,
-                asistencias: nuevosRegistros
-            };
-            
-            // FIXME: id_periodo debe venir de un selector de periodo (trimestre).
-            // Por simplicidad, hardcodeamos 1 si no hay selector de trimestres en el prototipo.
-            payload.id_periodo = 1; 
+            if (nuevosRegistros.length > 0) {
+                const payload = {
+                    idAsignacion: asignacionActiva.idAsignacion,
+                    idPeriodo: 1, 
+                    fecha: fecha,
+                    asistencias: nuevosRegistros
+                };
+                await registrarAsistenciaGrupal(payload);
+            }
 
-            await registrarAsistenciaGrupal(payload);
-            setMensaje({ tipo: 'success', texto: 'Asistencia registrada correctamente.' });
+            for (const mod of registrosModificados) {
+                await actualizarAsistencia(mod.idAsistencia, {
+                    estado: mod.estado,
+                    justificacion: mod.justificacion
+                });
+            }
+
+            setMensaje({ tipo: 'success', texto: 'Asistencia guardada y actualizada correctamente.' });
             cargarAsistenciaDia();
         } catch (error) {
             console.error(error);
@@ -221,7 +249,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                 <tbody>
                                     {estudiantes.map((est) => {
                                         const asis = asistencias[est.idMatricula] || { estado: 'PRESENTE', justificacion: '' };
-                                        const yaRegistrado = !!asis.id_asistencia;
+                                        const yaRegistrado = !!asis.idAsistencia;
                                         
                                         return (
                                             <tr key={est.idMatricula} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -234,7 +262,6 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                         {['PRESENTE', 'AUSENTE', 'JUSTIFICADO', 'ATRASO'].map(estado => (
                                                             <button
                                                                 key={estado}
-                                                                disabled={yaRegistrado}
                                                                 onClick={() => handleEstadoChange(est.idMatricula, estado)}
                                                                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${
                                                                     asis.estado === estado 
@@ -243,7 +270,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                                         : estado === 'JUSTIFICADO' ? 'bg-blue-500 text-white shadow-sm'
                                                                         : 'bg-yellow-500 text-white shadow-sm'
                                                                         : 'text-slate-500 hover:bg-slate-200'
-                                                                } ${yaRegistrado ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                                                }`}
                                                             >
                                                                 {estado.charAt(0)}
                                                             </button>
@@ -255,7 +282,7 @@ export default function DocenteAsistencia({ asignacionActiva }) {
                                                         type="text" 
                                                         value={asis.justificacion || ''}
                                                         onChange={(e) => handleJustificacionChange(est.idMatricula, e.target.value)}
-                                                        disabled={yaRegistrado || (asis.estado !== 'JUSTIFICADO' && asis.estado !== 'ATRASO' && asis.estado !== 'AUSENTE')}
+                                                        disabled={asis.estado !== 'JUSTIFICADO' && asis.estado !== 'ATRASO' && asis.estado !== 'AUSENTE'}
                                                         placeholder={asis.estado === 'JUSTIFICADO' ? 'Especifique motivo...' : ''}
                                                         className="w-full px-3 py-1.5 border border-slate-300 rounded-md text-sm disabled:bg-slate-100 disabled:text-slate-400"
                                                     />
