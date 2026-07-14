@@ -71,12 +71,22 @@ export default function DocenteActividades({ asignacionActiva, setSeccion, asign
             setEstudiantes(ests);
 
             // 3. Obtener calificaciones de todos los estudiantes para mapear métricas
+            const pers = periodos.length > 0 ? periodos : await getPeriodosEvaluacion();
+            if (periodos.length === 0) {
+                const sorted = (pers || []).sort((a, b) => a.id_periodo - b.id_periodo);
+                setPeriodos(sorted);
+            }
+            
             const allCalificaciones = [];
             await Promise.all(ests.map(async (est) => {
                 try {
-                    const res = await api.get(`/api/calificaciones/matricula/${est.idMatricula}/trimestre/1`);
-                    const cList = res.data?.calificaciones || [];
-                    allCalificaciones.push(...cList);
+                    const pResults = await Promise.all(pers.map(p => 
+                        api.get(`/api/calificaciones/matricula/${est.idMatricula}/trimestre/${p.id_periodo}`)
+                    ));
+                    pResults.forEach(res => {
+                        const cList = res.data?.calificaciones || [];
+                        allCalificaciones.push(...cList);
+                    });
                 } catch (err) {
                     console.error("Error al obtener calificaciones de matrícula:", est.idMatricula, err);
                 }
@@ -223,7 +233,7 @@ export default function DocenteActividades({ asignacionActiva, setSeccion, asign
                     idMatricula: m.idMatricula,
                     idActividad: actId,
                     nota: m.nota,
-                    trimestre: 1
+                    trimestre: parseInt(gradingActivity.idPeriodo)
                 });
             }));
             
