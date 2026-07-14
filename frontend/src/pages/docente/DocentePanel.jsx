@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "../../components/Layout";
-import { getMisAsignaciones } from '../../services/docente/docenteService';
+import { getMisAsignaciones, getAsistenciaPorAsignacionYFecha } from '../../services/docente/docenteService';
 import DocenteActividades from "./DocenteActividades";
 import DocenteAsistencia from "./DocenteAsistencia";
 
@@ -15,9 +15,43 @@ export default function DocentePanel() {
                 console.log("[React Debug] Obteniendo asignaciones del docente...");
                 const data = await getMisAsignaciones();
                 console.log("[React Debug] Asignaciones recibidas:", data);
-                setAsignaciones(data);
-                if (data && data.length > 0) {
-                    setAsignacionActiva(data[0]);
+                
+                // Calcular dinámicamente la asistencia real desde el historial
+                const enriched = await Promise.all(data.map(async (a) => {
+                    try {
+                        const response = await getAsistenciaPorAsignacionYFecha(a.idAsignacion, "");
+                        const registros = response.asistencias || [];
+                        
+                        let totalPresentes = 0;
+                        let totalAusentes = 0;
+                        let totalJustificados = 0;
+                        let totalAtrasos = 0;
+                        
+                        registros.forEach(r => {
+                            if (r.estado === 'PRESENTE') totalPresentes += 1;
+                            else if (r.estado === 'AUSENTE') totalAusentes += 1;
+                            else if (r.estado === 'JUSTIFICADO') totalJustificados += 1;
+                            else if (r.estado === 'ATRASO') totalAtrasos += 1;
+                        });
+                        
+                        const total = totalPresentes + totalAusentes + totalJustificados + totalAtrasos;
+                        const porcentajeAsistenciaReal = total > 0 
+                            ? ((totalPresentes + totalJustificados + totalAtrasos) / total) * 100 
+                            : 100.0;
+                        
+                        return {
+                            ...a,
+                            porcentajeAsistencia: parseFloat(porcentajeAsistenciaReal.toFixed(1))
+                        };
+                    } catch (err) {
+                        console.error(`Error calculando asistencia para asignación ${a.idAsignacion}:`, err);
+                        return a;
+                    }
+                }));
+
+                setAsignaciones(enriched);
+                if (enriched && enriched.length > 0) {
+                    setAsignacionActiva(enriched[0]);
                 } else {
                     console.warn("[React Debug] El endpoint retornó una lista vacía de asignaciones.");
                 }
