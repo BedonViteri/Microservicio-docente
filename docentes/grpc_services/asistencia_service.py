@@ -132,7 +132,7 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
@@ -174,7 +174,7 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
@@ -214,7 +214,7 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
@@ -257,6 +257,6 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))

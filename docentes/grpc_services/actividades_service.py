@@ -64,7 +64,7 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Periodo de evaluación no encontrado")
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
@@ -103,7 +103,7 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
@@ -133,7 +133,7 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
@@ -167,7 +167,7 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
                 actividades=actividades_list
             )
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
@@ -185,6 +185,6 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
-            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+            if hasattr(context, '_state') and getattr(context._state, 'aborted', False):
                 raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
