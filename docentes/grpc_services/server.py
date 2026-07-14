@@ -8,10 +8,13 @@ from .client import validate_teacher_assignment
 
 def get_nota_cualitativa(nota):
     val = float(nota)
-    if val >= 9.0: return "DAR"
-    elif val >= 7.0: return "AAR"
-    elif val >= 5.0: return "PAR"
-    else: return "NAR"
+    if val >= 10.0: return "A_MAS"
+    elif val >= 9.0: return "A_MENOS"
+    elif val >= 8.0: return "B_MAS"
+    elif val >= 7.0: return "B_MENOS"
+    elif val >= 6.0: return "C_MAS"
+    elif val >= 5.0: return "C_MENOS"
+    else: return "D"
 
 class DocenteServiceServicer(docente_pb2_grpc.DocenteServiceServicer):
     

@@ -17,10 +17,13 @@ class TipoActividad(models.TextChoices):
 
 
 class NotaCualitativa(models.TextChoices):
-    DAR = "DAR", "Domina los aprendizajes requeridos"
-    AAR = "AAR", "Alcanza los aprendizajes requeridos"
-    PAR = "PAR", "Proximo a alcanzar los aprendizajes requeridos"
-    NAR = "NAR", "No alcanza los aprendizajes requeridos"
+    A_MAS = "A_MAS", "A+"
+    A_MENOS = "A_MENOS", "A-"
+    B_MAS = "B_MAS", "B+"
+    B_MENOS = "B_MENOS", "B-"
+    C_MAS = "C_MAS", "C+"
+    C_MENOS = "C_MENOS", "C-"
+    D = "D", "D"
 
 
 class EstadoAsistencia(models.TextChoices):
@@ -92,7 +95,7 @@ class Calificacion(models.Model):
     id_matricula = models.IntegerField()
     nota = models.DecimalField(max_digits=4, decimal_places=2)
     nota_cualitativa = models.CharField(
-        max_length=3, choices=NotaCualitativa.choices, blank=True
+        max_length=10, choices=NotaCualitativa.choices, blank=True
     )
     observacion = models.TextField(blank=True, null=True)
     registrado_por = models.IntegerField(blank=True, null=True)

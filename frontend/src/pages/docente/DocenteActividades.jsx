@@ -119,10 +119,13 @@ export default function DocenteActividades({ asignacionActiva }) {
     const getNotaCualitativa = (nota) => {
         const val = parseFloat(nota);
         if (isNaN(val)) return "";
-        if (val >= 9.0) return "DAR";
-        if (val >= 7.0) return "AAR";
-        if (val >= 5.0) return "PAR";
-        return "NAR";
+        if (val >= 10.0) return "A_MAS";
+        if (val >= 9.0) return "A_MENOS";
+        if (val >= 8.0) return "B_MAS";
+        if (val >= 7.0) return "B_MENOS";
+        if (val >= 6.0) return "C_MAS";
+        if (val >= 5.0) return "C_MENOS";
+        return "D";
     };
 
     const handleGradingNotaChange = (matriculaId, value) => {
@@ -471,13 +474,13 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                 </td>
                                                 <td className="px-6 py-4 font-bold">
                                                     {cualitativa && (
-                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${
-                                                            cualitativa === 'DAR' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
-                                                            cualitativa === 'AAR' ? 'bg-green-50 text-green-700 border border-green-200' :
-                                                            cualitativa === 'PAR' ? 'bg-yellow-50 text-yellow-700 border border-yellow-200' :
-                                                            'bg-red-50 text-red-700 border border-red-200'
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border ${
+                                                            cualitativa.startsWith('A') ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                            cualitativa.startsWith('B') ? 'bg-green-50 text-green-700 border-green-200' :
+                                                            cualitativa.startsWith('C') ? 'bg-yellow-50 text-yellow-700 border-yellow-200' :
+                                                            'bg-red-50 text-red-700 border-red-200'
                                                         }`}>
-                                                            {cualitativa}
+                                                            {cualitativa.replace('_MAS', '+').replace('_MENOS', '-')}
                                                         </span>
                                                     )}
                                                 </td>
@@ -490,12 +493,12 @@ export default function DocenteActividades({ asignacionActiva }) {
 
                         {/* Leyenda explicativa cualitativa */}
                         <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-500 space-y-1">
-                            <p className="font-bold text-slate-700">Leyenda de Equivalencias Cualitativas (Ministerio de Educación):</p>
+                            <p className="font-bold text-slate-700">Leyenda de Equivalencias Cualitativas:</p>
                             <ul className="list-disc pl-4 space-y-0.5">
-                                <li><strong className="text-blue-600">DAR</strong>: Domina los Aprendizajes Requeridos (9.00 - 10.00)</li>
-                                <li><strong className="text-green-600">AAR</strong>: Alcanza los Aprendizajes Requeridos (7.00 - 8.99)</li>
-                                <li><strong className="text-yellow-600">PAR</strong>: Próximo a Alcanzar los Aprendizajes Requeridos (5.00 - 6.99)</li>
-                                <li><strong className="text-red-600">NAR</strong>: No Alcanza los Aprendizajes Requeridos (menos de 5.00)</li>
+                                <li><strong className="text-blue-600">A+ / A-</strong>: Rango Excelente / Sobresaliente (9.00 - 10.00)</li>
+                                <li><strong className="text-green-600">B+ / B-</strong>: Rango Muy Bueno / Alcanza (7.00 - 8.99)</li>
+                                <li><strong className="text-yellow-600">C+ / C-</strong>: Rango Regular / Próximo a alcanzar (5.00 - 6.99)</li>
+                                <li><strong className="text-red-600">D</strong>: Rango Deficiente / No alcanza (menos de 5.00)</li>
                             </ul>
                         </div>
                     </div>
