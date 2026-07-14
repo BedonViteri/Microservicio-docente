@@ -64,6 +64,8 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Periodo de evaluación no encontrado")
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
     def EditarActividad(self, request, context):
@@ -101,6 +103,8 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
     def ObtenerActividad(self, request, context):
@@ -129,6 +133,8 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
     def ListarActividades(self, request, context):
@@ -161,6 +167,8 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
                 actividades=actividades_list
             )
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
             
     def EliminarActividad(self, request, context):
@@ -177,4 +185,6 @@ class ActividadServiceServicer(actividades_pb2_grpc.ActividadServiceServicer):
         except ObjectDoesNotExist:
             context.abort(grpc.StatusCode.NOT_FOUND, "Actividad no encontrada")
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))

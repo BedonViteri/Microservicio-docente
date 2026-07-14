@@ -132,6 +132,8 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
     def ActualizarAsistencia(self, request, context):
@@ -172,6 +174,8 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
     def ConsultarAsistencia(self, request, context):
@@ -210,6 +214,8 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
 
     def ConsultarResumenAsistencia(self, request, context):
@@ -251,4 +257,6 @@ class AsistenciaServiceServicer(asistencia_pb2_grpc.AsistenciaServiceServicer):
         except grpc.RpcError:
             raise
         except Exception as e:
+            if type(e).__name__ in ('_RpcEnded', 'RpcError') or 'grpc' in type(e).__module__:
+                raise
             context.abort(grpc.StatusCode.INTERNAL, str(e))
