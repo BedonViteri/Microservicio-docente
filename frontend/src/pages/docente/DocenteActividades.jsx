@@ -4,7 +4,7 @@ import { getActividadesPorAsignacion, getEstudiantesPorAsignacion, createActivid
 
 const PRIMARY = "#243A76";
 
-export default function DocenteActividades({ asignacionActiva }) {
+export default function DocenteActividades({ asignacionActiva, setSeccion }) {
     const [actividades, setActividades] = useState([]);
     const [estudiantes, setEstudiantes] = useState([]);
     const [calificacionesMap, setCalificacionesMap] = useState({});
@@ -21,6 +21,10 @@ export default function DocenteActividades({ asignacionActiva }) {
         tipo: "TAREA",
         fechaEntrega: ""
     });
+
+    // Estados para modal de eliminación personalizado
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [actividadToDelete, setActividadToDelete] = useState(null);
 
     useEffect(() => {
         if (asignacionSel) {
@@ -104,7 +108,7 @@ export default function DocenteActividades({ asignacionActiva }) {
                 nombre: act.nombre,
                 descripcion: act.descripcion,
                 tipo: act.tipo,
-                fechaEntrega: act.fechaEntrega ? act.fechaEntrega.substring(0, 16) : "" 
+                fechaEntrega: act.fechaEntrega ? act.fechaEntrega.substring(0, 10) : "" 
             });
         } else {
             setFormData({
@@ -127,7 +131,7 @@ export default function DocenteActividades({ asignacionActiva }) {
                 nombre: formData.nombre,
                 descripcion: formData.descripcion,
                 tipo: formData.tipo,
-                fechaEntrega: new Date(formData.fechaEntrega).toISOString().substring(0, 10),
+                fechaEntrega: formData.fechaEntrega,
                 ponderacion: 10,
                 notaMaxima: 10,
                 esSumativa: formData.tipo === 'EXAMEN_TRIMESTRAL'
@@ -146,10 +150,17 @@ export default function DocenteActividades({ asignacionActiva }) {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm("¿Está seguro de eliminar esta actividad?")) return;
+    const triggerDeleteConfirmation = (act) => {
+        setActividadToDelete(act);
+        setShowDeleteModal(true);
+    };
+
+    const executeDelete = async () => {
+        if (!actividadToDelete) return;
         try {
-            await deleteActividad(id);
+            await deleteActividad(actividadToDelete.idActividad);
+            setShowDeleteModal(false);
+            setActividadToDelete(null);
             cargarActividades(asignacionSel);
         } catch (error) {
             console.error("Error eliminando actividad:", error);
@@ -328,7 +339,7 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                                     <p className="font-bold text-blue-600 mt-0.5">{m.promedio.toFixed(1)} / 10</p>
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-[10px] text-slate-400 uppercase font-medium">Entrega</p>
+                                                                    <p className="text-[10px] text-slate-400 uppercase font-medium">Vencimiento</p>
                                                                     <p className="font-semibold text-slate-600 mt-0.5 text-[10px] truncate" title={act.fechaEntrega}>
                                                                         {act.fechaEntrega}
                                                                     </p>
@@ -336,19 +347,27 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                             </div>
                                                         </div>
 
-                                                        <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
+                                                        <div className="flex justify-between items-center border-t border-slate-100 pt-3">
                                                             <button 
-                                                                onClick={() => handleOpenModal(act)}
-                                                                className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-medium transition"
+                                                                onClick={() => setSeccion("calificaciones")}
+                                                                className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg font-bold transition shadow-sm"
                                                             >
-                                                                Editar
+                                                                Calificar
                                                             </button>
-                                                            <button 
-                                                                onClick={() => handleDelete(act.idActividad)}
-                                                                className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg font-medium transition"
-                                                            >
-                                                                Eliminar
-                                                            </button>
+                                                            <div className="flex gap-2">
+                                                                <button 
+                                                                    onClick={() => handleOpenModal(act)}
+                                                                    className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg font-medium transition"
+                                                                >
+                                                                    Editar
+                                                                </button>
+                                                                <button 
+                                                                    onClick={() => triggerDeleteConfirmation(act)}
+                                                                    className="text-xs bg-rose-50 hover:bg-rose-100 text-rose-600 px-3 py-1.5 rounded-lg font-medium transition"
+                                                                >
+                                                                    Eliminar
+                                                                </button>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 );
@@ -408,7 +427,13 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                     <p className="font-medium text-slate-600 mt-0.5">{act.fechaEntrega}</p>
                                                 </div>
                                                 
-                                                <div className="flex gap-2 ml-auto lg:ml-0">
+                                                <div className="flex items-center gap-2 ml-auto lg:ml-0">
+                                                    <button 
+                                                        onClick={() => setSeccion("calificaciones")}
+                                                        className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                                                    >
+                                                        Calificar
+                                                    </button>
                                                     <button 
                                                         onClick={() => handleOpenModal(act)}
                                                         className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition"
@@ -419,7 +444,7 @@ export default function DocenteActividades({ asignacionActiva }) {
                                                         </svg>
                                                     </button>
                                                     <button 
-                                                        onClick={() => handleDelete(act.idActividad)}
+                                                        onClick={() => triggerDeleteConfirmation(act)}
                                                         className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition"
                                                         title="Eliminar"
                                                     >
@@ -447,10 +472,10 @@ export default function DocenteActividades({ asignacionActiva }) {
                 </div>
             )}
 
-            {/* Modal para Crear/Editar */}
+            {/* Modal para Crear / Editar Actividad */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100">
                         <div style={{ backgroundColor: PRIMARY }} className="px-6 py-4 flex items-center justify-between text-white">
                             <h3 className="font-semibold text-lg">{formData.idActividad ? "Editar" : "Nueva"} Actividad</h3>
                             <button onClick={() => setShowModal(false)} className="text-white hover:text-slate-200 transition">
@@ -459,23 +484,21 @@ export default function DocenteActividades({ asignacionActiva }) {
                         </div>
                         <form onSubmit={handleSave} className="p-6">
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Título / Nombre</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Título / Nombre</label>
                                 <input 
                                     type="text" 
                                     required
                                     value={formData.nombre}
                                     onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                                    style={{ '--tw-ring-color': PRIMARY }}
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 />
                             </div>
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Actividad</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Tipo de Actividad</label>
                                 <select 
                                     value={formData.tipo}
                                     onChange={(e) => setFormData({...formData, tipo: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                                    style={{ '--tw-ring-color': PRIMARY }}
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 >
                                     <option value="TAREA">Tarea</option>
                                     <option value="TALLER">Taller</option>
@@ -483,33 +506,65 @@ export default function DocenteActividades({ asignacionActiva }) {
                                 </select>
                             </div>
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Descripción</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Descripción</label>
                                 <textarea 
                                     rows="3"
                                     value={formData.descripcion}
                                     onChange={(e) => setFormData({...formData, descripcion: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                                    style={{ '--tw-ring-color': PRIMARY }}
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 ></textarea>
                             </div>
                             <div className="mb-6">
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Fecha de Entrega / Evaluación</label>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">Fecha de Entrega / Vencimiento</label>
                                 <input 
                                     type="date" 
                                     required
                                     value={formData.fechaEntrega}
                                     onChange={(e) => setFormData({...formData, fechaEntrega: e.target.value})}
-                                    className="w-full p-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent"
-                                    style={{ '--tw-ring-color': PRIMARY }}
+                                    className="w-full p-2.5 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
-                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition">Cancelar</button>
-                                <button type="submit" style={{ backgroundColor: PRIMARY }} className="px-4 py-2 text-sm font-medium text-white hover:opacity-90 rounded-lg transition">
+                                <button type="button" onClick={() => setShowModal(false)} className="px-4 py-2 text-sm font-medium text-slate-650 bg-slate-100 hover:bg-slate-200 rounded-xl transition">Cancelar</button>
+                                <button type="submit" style={{ backgroundColor: PRIMARY }} className="px-4 py-2 text-sm font-bold text-white hover:opacity-90 rounded-xl transition">
                                     Guardar
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmación de Eliminación Personalizado */}
+            {showDeleteModal && actividadToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 backdrop-blur-sm px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6 text-center">
+                            {/* Icono de advertencia en rojo */}
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-105 text-red-600 mb-4 border border-red-200">
+                                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-800">¿Eliminar actividad?</h3>
+                            <p className="text-slate-500 text-xs mt-2 px-4">
+                                ¿Está seguro de que desea eliminar la actividad <strong>"{actividadToDelete.nombre}"</strong>? Todos los datos de calificaciones asociados se borrarán permanentemente. Esta acción no se puede deshacer.
+                            </p>
+                        </div>
+                        <div className="bg-slate-50 px-6 py-4 flex flex-row-reverse gap-3 border-t border-slate-100">
+                            <button
+                                onClick={executeDelete}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                            >
+                                Sí, eliminar actividad
+                            </button>
+                            <button
+                                onClick={() => { setShowDeleteModal(false); setActividadToDelete(null); }}
+                                className="px-4 py-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-medium transition"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
