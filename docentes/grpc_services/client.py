@@ -16,7 +16,7 @@ def validate_teacher_assignment(id_docente, id_asignacion):
         id_asignacion=id_asignacion
     )
     try:
-        response = stub.ValidateTeacherAssignment(request)
+        response = stub.ValidateTeacherAssignment(request, metadata=[('internal_token', 'dev-token-123')])
         return {
             "is_valid": response.is_valid,
             "id_asignatura": response.id_asignatura,
@@ -36,7 +36,7 @@ def validate_student_enrollment(id_matricula, id_asignacion):
         id_asignacion=id_asignacion
     )
     try:
-        response = stub.ValidateStudentEnrollment(request)
+        response = stub.ValidateStudentEnrollment(request, metadata=[('internal_token', 'dev-token-123')])
         return {
             "is_valid": response.is_valid,
             "id_estudiante": response.id_estudiante
@@ -49,7 +49,7 @@ def get_current_academic_year():
     stub = get_context_stub()
     request = contexto_docente_pb2.EmptyRequest()
     try:
-        response = stub.GetCurrentAcademicYear(request)
+        response = stub.GetCurrentAcademicYear(request, metadata=[('internal_token', 'dev-token-123')])
         return {
             "id_ano_lectivo": response.id_ano_lectivo,
             "nombre": response.nombre,
@@ -66,7 +66,7 @@ def get_students_by_assignment(id_asignacion):
         id_asignacion=id_asignacion
     )
     try:
-        response = stub.GetStudentsByAssignment(request)
+        response = stub.GetStudentsByAssignment(request, metadata=[('internal_token', 'dev-token-123')])
         return [
             {
                 "id_estudiante": student.id_estudiante,
