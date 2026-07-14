@@ -122,18 +122,35 @@ export default function DocenteAsistencia({ asignacionActiva }) {
             const list = Object.values(agrupado).sort((a, b) => b.fecha.localeCompare(a.fecha));
             setHistorial(list);
             
-            // Consultar el resumen acumulado general de la base de datos
-            const resResponse = await getResumenAsistencia(asignacionActiva.idAsignacion);
-            const rawResumenes = resResponse.resumenes || [];
-            const normalized = rawResumenes.map(r => ({
-                idMatricula: r.id_matricula !== undefined ? r.id_matricula : r.idMatricula,
-                totalPresentes: r.total_presentes !== undefined ? r.total_presentes : r.totalPresentes,
-                totalAusentes: r.total_ausentes !== undefined ? r.total_ausentes : r.totalAusentes,
-                totalJustificados: r.total_justificados !== undefined ? r.total_justificados : r.totalJustificados,
-                totalAtrasos: r.total_atrasos !== undefined ? r.total_atrasos : r.totalAtrasos,
-                porcentajeAsistencia: r.porcentaje_asistencia !== undefined ? r.porcentaje_asistencia : r.porcentajeAsistencia
-            }));
-            setResumenes(normalized);
+            // Generar resúmenes localmente a partir de los registros reales para máxima precisión y sincronización inmediata
+            const calculatedResumenes = estudiantes.map(est => {
+                const studentAsis = registros.filter(r => (r.id_matricula !== undefined ? r.id_matricula : r.idMatricula) === est.idMatricula);
+                
+                let totalPresentes = 0;
+                let totalAusentes = 0;
+                let totalJustificados = 0;
+                let totalAtrasos = 0;
+                
+                studentAsis.forEach(r => {
+                    if (r.estado === 'PRESENTE') totalPresentes += 1;
+                    else if (r.estado === 'AUSENTE') totalAusentes += 1;
+                    else if (r.estado === 'JUSTIFICADO') totalJustificados += 1;
+                    else if (r.estado === 'ATRASO') totalAtrasos += 1;
+                });
+                
+                const total = totalPresentes + totalAusentes + totalJustificados + totalAtrasos;
+                const porcentajeAsistencia = total > 0 ? ((totalPresentes + totalJustificados + totalAtrasos) / total) * 100 : 0;
+                
+                return {
+                    idMatricula: est.idMatricula,
+                    totalPresentes,
+                    totalAusentes,
+                    totalJustificados,
+                    totalAtrasos,
+                    porcentajeAsistencia
+                };
+            });
+            setResumenes(calculatedResumenes);
         } catch (error) {
             console.error("Error al cargar datos generales de asistencia:", error);
         } finally {
